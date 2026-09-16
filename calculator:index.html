@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>명조 스킬 재화 계산기</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2e; --panel2:#1c2438; --border:#2a3350;
+    --text:#e8e6df; --muted:#8b93a7; --gold:#d4af6a; --gold-dim:#a68a52;
+    --danger:#d9534f; --danger-dim:#8a3a37;
+    --t-green:#4fae7a; --t-blue:#4a90d9; --t-purple:#9b6fd1; --t-gold:#d4af6a;
+    --e-glacio:#7ec8e3; --e-fusion:#e0703e; --e-electro:#a56fe0;
+    --e-aero:#5cbf8e; --e-spectro:#d9c15a; --e-havoc:#d968a0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Malgun Gothic",sans-serif;font-size:14px;line-height:1.5;padding-bottom:20px;}
+  header{max-width:960px;margin:0 auto;padding:16px 16px 0;}
+  h1{font-size:18px;color:var(--gold);margin:0 0 12px;font-weight:700;}
+  main{max-width:960px;margin:0 auto;padding:0 16px 16px;}
+  nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+  nav.tabs button{background:none;border:none;color:var(--muted);padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;}
+  nav.tabs button.active{color:var(--gold);border-bottom-color:var(--gold);font-weight:600;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--text);}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+  input[type=text]{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:13px;}
+  select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 7px;font-size:12.5px;}
+  button.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12.5px;}
+  button.btn:hover{border-color:var(--gold-dim);}
+  button.btn-gold{background:var(--gold);color:#1a1608;border:none;font-weight:700;}
+  button.btn-danger{background:var(--danger-dim);border:1px solid var(--danger);color:#fff;}
+  button.btn-small{padding:3px 8px;font-size:11px;}
+  button.tglbtn{background:var(--panel2);border:1px solid var(--border);color:var(--muted);padding:6px 10px;border-radius:6px;font-size:12px;cursor:pointer;}
+  button.tglbtn.active{color:var(--gold);border-color:var(--gold-dim);}
+
+  .group-block{margin-bottom:14px;}
+  .group-title{font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+  .pill-wrap{display:flex;flex-wrap:wrap;gap:6px;}
+  .pill{
+    border:1px solid var(--border);border-left:4px solid var(--pc,var(--gold));
+    background:var(--panel2);color:var(--text);border-radius:5px;
+    padding:5px 10px;font-size:12px;cursor:pointer;
+  }
+  .pill:hover{border-color:var(--gold-dim);}
+  .pill.added{opacity:0.4;cursor:default;}
+
+  .totals-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+  .tstat{background:var(--panel2);border-radius:6px;padding:10px;text-align:center;}
+  .tstat .n{font-size:19px;font-weight:700;}
+  .tstat .l{font-size:11px;color:var(--muted);margin-top:2px;}
+  .tstat.green .n{color:var(--t-green);}
+  .tstat.blue .n{color:var(--t-blue);}
+  .tstat.purple .n{color:var(--t-purple);}
+  .tstat.gold .n{color:var(--t-gold);}
+
+  .trainee-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--panel2);}
+  .trainee-card.inactive{opacity:0.45;}
+  .trainee-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+  .trainee-name{font-weight:700;font-size:14px;}
+  .trainee-tags{font-size:11px;color:var(--muted);margin-left:6px;}
+  .skill-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px;}
+  @media (max-width:640px){.skill-grid{grid-template-columns:repeat(2,1fr);}}
+  .skill-cell{background:var(--panel);border-radius:5px;padding:6px;text-align:center;}
+  .skill-cell label{display:block;font-size:10.5px;color:var(--muted);margin-bottom:3px;}
+  .sub-line{font-size:11.5px;color:var(--muted);text-align:right;}
+  .sub-line b{color:var(--gold);}
+  .foot-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  label.toggle{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:4px;}
+
+  .settings-body{display:none;}
+  .settings-body.open{display:block;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th,td{padding:6px;text-align:center;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);}
+  td input[type=text]{width:60px;text-align:center;}
+
+  .party-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:var(--panel2);}
+  .party-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .party-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .slot{background:var(--panel);border:1px dashed var(--border);border-radius:6px;padding:10px;text-align:center;}
+  .slot .name{font-weight:600;font-size:13px;margin-bottom:4px;}
+  .slot .empty{color:var(--muted);font-size:12px;}
+  .slot select{width:100%;margin-top:4px;}
+
+  .empty-hint{color:var(--muted);font-size:12px;padding:10px 0;}
+  .note{font-size:11.5px;color:var(--muted);margin-top:6px;}
+  .toast{position:fixed;bottom:16px;right:16px;background:var(--panel2);border:1px solid var(--gold-dim);color:var(--text);padding:8px 14px;border-radius:6px;font-size:12.5px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<header>
+  <h1>명조 스킬 재화 계산기 — 프로토타입 v1</h1>
+  <nav class="tabs" id="tabNav"></nav>
+</header>
+<main id="mainArea"></main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   저장 어댑터 (window.storage 없으면 localStorage로 자동 폴백)
+========================================================= */
+const hasArtifactStorage = typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+const storageAdapter = hasArtifactStorage ? {
+  get: (key) => window.storage.get(key, false),
+  set: (key, value) => window.storage.set(key, value, false),
+} : {
+  get: async (key) => {
+    const v = localStorage.getItem('wuwa_calc_' + key);
+    return v == null ? null : {value: v};
+  },
+  set: async (key, value) => {
+    localStorage.setItem('wuwa_calc_' + key, value);
+    return {value};
+  },
+};
+
+/* =========================================================
+   로스터 (58명 — element/weapon type은 공개 캐릭터 DB 기준으로 검증.
+   이름은 한국어 공식 표기를 확인하지 못해 영문 표기 그대로 둠.
+   encore.moe 기반 정확한 한국어 로스터가 있으면 이 배열만 통째로 교체하면 됨) */
+const ROSTER = [
+  {name:'Sanhua', element:'응결', weapon:'직검'},
+  {name:'Baizhi', element:'응결', weapon:'증폭기'},
+  {name:'Lingyang', element:'응결', weapon:'권갑'},
+  {name:'Zhezhi', element:'응결', weapon:'증폭기'},
+  {name:'Youhu', element:'응결', weapon:'권갑'},
+  {name:'Carlotta', element:'응결', weapon:'권총'},
+  {name:'Lucilla', element:'응결', weapon:'증폭기'},
+  {name:'Hiyuki', element:'응결', weapon:'직검'},
+  {name:'Suisui', element:'응결', weapon:'증폭기'},
+  {name:'Chixia', element:'용융', weapon:'권총'},
+  {name:'Encore', element:'용융', weapon:'증폭기'},
+  {name:'Mortefi', element:'용융', weapon:'권총'},
+  {name:'Changli', element:'용융', weapon:'직검'},
+  {name:'Brant', element:'용융', weapon:'직검'},
+  {name:'Lupa', element:'용융', weapon:'대검'},
+  {name:'Galbrena', element:'용융', weapon:'권총'},
+  {name:'Mornye', element:'용융', weapon:'대검'},
+  {name:'Aemeath', element:'용융', weapon:'직검'},
+  {name:'Denia', element:'용융', weapon:'증폭기'},
+  {name:'Jingran', element:'용융', weapon:'대검'},
+  {name:'Calcharo', element:'전도', weapon:'대검'},
+  {name:'Yinlin', element:'전도', weapon:'증폭기'},
+  {name:'Yuanwu', element:'전도', weapon:'권갑'},
+  {name:'Xiangli Yao', element:'전도', weapon:'권갑'},
+  {name:'Lumi', element:'전도', weapon:'대검'},
+  {name:'Augusta', element:'전도', weapon:'대검'},
+  {name:'Buling', element:'전도', weapon:'증폭기'},
+  {name:'Rebecca', element:'전도', weapon:'권총'},
+  {name:'Rover(전도)', element:'전도', weapon:'직검'},
+  {name:'Yangyang', element:'기류', weapon:'직검'},
+  {name:'Aalto', element:'기류', weapon:'권총'},
+  {name:'Jiyan', element:'기류', weapon:'대검'},
+  {name:'Jianxin', element:'기류', weapon:'권갑'},
+  {name:'Ciaccona', element:'기류', weapon:'권총'},
+  {name:'Rover(기류)', element:'기류', weapon:'직검'},
+  {name:'Cartethyia', element:'기류', weapon:'직검'},
+  {name:'Iuno', element:'기류', weapon:'권갑'},
+  {name:'Qiuyuan', element:'기류', weapon:'직검'},
+  {name:'Sigrika', element:'기류', weapon:'권갑'},
+  {name:'Qingxiao', element:'기류', weapon:'직검'},
+  {name:'Verina', element:'회절', weapon:'증폭기'},
+  {name:'Rover(회절)', element:'회절', weapon:'직검'},
+  {name:'Jinhsi', element:'회절', weapon:'대검'},
+  {name:'Shorekeeper', element:'회절', weapon:'증폭기'},
+  {name:'Phoebe', element:'회절', weapon:'증폭기'},
+  {name:'Zani', element:'회절', weapon:'권갑'},
+  {name:'Lynae', element:'회절', weapon:'권총'},
+  {name:'Luuk Herssen', element:'회절', weapon:'권갑'},
+  {name:'Lucy', element:'회절', weapon:'권총'},
+  {name:'Taoqi', element:'인멸', weapon:'대검'},
+  {name:'Danjin', element:'인멸', weapon:'직검'},
+  {name:'Camellya', element:'인멸', weapon:'직검'},
+  {name:'Rover(인멸)', element:'인멸', weapon:'직검'},
+  {name:'Roccia', element:'인멸', weapon:'권갑'},
+  {name:'Cantarella', element:'인멸', weapon:'증폭기'},
+  {name:'Phrolova', element:'인멸', weapon:'증폭기'},
+  {name:'Chisa', element:'인멸', weapon:'대검'},
+  {name:'Yangyang: Xuanling', element:'인멸', weapon:'직검'},
+].map((c,i)=>({id:'r'+(i+1), ...c}));
+
+const ELEMENTS = ['응결','용융','전도','기류','회절','인멸'];
+const WEAPONS = ['대검','직검','권총','권갑','증폭기'];
+const ELEMENT_COLOR = {응결:'var(--e-glacio)', 용융:'var(--e-fusion)', 전도:'var(--e-electro)', 기류:'var(--e-aero)', 회절:'var(--e-spectro)', 인멸:'var(--e-havoc)'};
+const SKILL_DEFS = [
+  {key:'basic', label:'기본공격'},
+  {key:'skill', label:'공명스킬'},
+  {key:'circuit', label:'공명회로'},
+  {key:'liberation', label:'공명해방'},
+  {key:'intro', label:'변주스킬'},
+];
+
+/* =========================================================
+   기본값 / 상태
+========================================================= */
+function uid(p){ return p+'_'+Math.random().toString(36).slice(2,9); }
+function defaultSettings(){
+  return { green:5, blue:5, to6purple:3, to10purple:3, to10gold:6, includeSixInTen:true, treeBlue:3, treePurple:15, treeGold:12 };
+}
+function defaultTrainees(){ return []; }
+function defaultParties(){ return []; }
+
+let state = { trainees: defaultTrainees(), parties: defaultParties(), settings: defaultSettings() };
+const STORAGE_KEYS = ['trainees','parties','settings'];
+const saveTimers = {};
+
+async function loadAll(){
+  for(const key of STORAGE_KEYS){
+    try{
+      const res = await storageAdapter.get(key);
+      if(res && typeof res.value === 'string') state[key] = JSON.parse(res.value);
+    }catch(e){ /* 기본값 유지 */ }
+  }
+}
+function scheduleSave(key){
+  clearTimeout(saveTimers[key]);
+  saveTimers[key] = setTimeout(async ()=>{
+    try{ await storageAdapter.set(key, JSON.stringify(state[key])); }
+    catch(e){ showToast('저장 실패: '+key); }
+  }, 500);
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function numDisplay(n){ return (!n) ? '' : String(n); }
+function parseNum(v){ const n = parseInt(v,10); return isNaN(n) ? 0 : n; }
+function armedClick(btn, originalLabel, onConfirm){
+  if(btn.dataset.armed === '1'){
+    clearTimeout(Number(btn.dataset.timer));
+    btn.dataset.armed='0'; btn.textContent = originalLabel;
+    onConfirm();
+  }else{
+    btn.dataset.armed='1'; btn.textContent='한번 더 클릭';
+    const t = setTimeout(()=>{ btn.dataset.armed='0'; btn.textContent=originalLabel; }, 4000);
+    btn.dataset.timer = String(t);
+  }
+}
+
+/* =========================================================
+   계산 로직
+========================================================= */
+function zeroCost(){ return {green:0,blue:0,purple:0,gold:0}; }
+function addCost(a,b){ return {green:a.green+b.green, blue:a.blue+b.blue, purple:a.purple+b.purple, gold:a.gold+b.gold}; }
+function skillCost(level, s){
+  if(level !== '6' && level !== '10') return zeroCost();
+  const c = {green:s.green, blue:s.blue, purple:0, gold:0};
+  if(level==='6'){ c.purple += s.to6purple; }
+  else{
+    c.purple += s.to10purple;
+    if(s.includeSixInTen) c.purple += s.to6purple;
+    c.gold += s.to10gold;
+  }
+  return c;
+}
+function traineeSubtotal(tr, s){
+  let total = zeroCost();
+  SKILL_DEFS.forEach(sd=> total = addCost(total, skillCost(tr.skills[sd.key], s)));
+  if(tr.fillAll){ total.blue += s.treeBlue; total.purple += s.treePurple; total.gold += s.treeGold; }
+  return total;
+}
+function grandTotal(){
+  let total = zeroCost();
+  state.trainees.filter(t=>t.active).forEach(t=> total = addCost(total, traineeSubtotal(t, state.settings)));
+  return total;
+}
+
+/* =========================================================
+   탭 라우팅
+========================================================= */
+const TABS = [{id:'train', label:'캐릭터 육성'}, {id:'party', label:'육성 파티'}];
+let activeTab = 'train';
+let groupMode = 'element'; // 'element' | 'weapon'
+let searchQuery = '';
+let settingsOpen = false;
+
+function renderNav(){
+  const nav = document.getElementById('tabNav');
+  nav.innerHTML = TABS.map(t=>`<button data-tab="${t.id}" class="${t.id===activeTab?'active':''}">${t.label}</button>`).join('');
+  nav.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ activeTab=b.dataset.tab; renderAll(); }));
+}
+function renderAll(){
+  renderNav();
+  const m = document.getElementById('mainArea');
+  m.innerHTML = activeTab==='train' ? renderTrainTab() : renderPartyTab();
+  bindEvents();
+}
+
+/* =========================================================
+   캐릭터 육성 탭
+========================================================= */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderRosterPanel(){
+  const q = searchQuery.trim().toLowerCase();
+  const addedIds = new Set(state.trainees.map(t=>t.rosterId));
+  const filtered = ROSTER.filter(c=> !q || c.name.toLowerCase().includes(q));
+  const keys = groupMode==='element' ? ELEMENTS : WEAPONS;
+
+  const groups = keys.map(key=>{
+    const items = filtered.filter(c=> (groupMode==='element' ? c.element : c.weapon) === key);
+    if(!items.length) return '';
+    const pills = items.map(c=>{
+      const added = addedIds.has(c.id);
+      return `<span class="pill ${added?'added':''}" data-rid="${c.id}" style="--pc:${ELEMENT_COLOR[c.element]}">${escapeHtml(c.name)}${added?' ✓':''}</span>`;
+    }).join('');
+    return `<div class="group-block"><div class="group-title">${key} (${items.length})</div><div class="pill-wrap">${pills}</div></div>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <h2>캐릭터 추가</h2>
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="이름 검색" value="${escapeHtml(searchQuery)}">
+        <button class="tglbtn ${groupMode==='element'?'active':''}" id="grp-element">속성별</button>
+        <button class="tglbtn ${groupMode==='weapon'?'active':''}" id="grp-weapon">무기별</button>
+      </div>
+      ${groups || '<div class="empty-hint">검색 결과가 없습니다</div>'}
+      <div class="note">클릭하면 아래 육성 목록에 추가됩니다. (로스터는 58명 샘플 — 실제 최신 목록으로 교체 가능)</div>
+    </div>
+  `;
+}
+
+function renderSettingsPanel(){
+  const s = state.settings;
+  return `
+    <div class="card">
+      <div class="toolbar" style="justify-content:space-between;">
+        <h2 style="margin:0;">소모량 설정</h2>
+        <button class="btn btn-small" id="settings-toggle">${settingsOpen?'접기':'펼치기'}</button>
+      </div>
+      <div class="settings-body ${settingsOpen?'open':''}">
+        <table>
+          <tr><th style="text-align:left;">항목</th><th>초록</th><th>파랑</th><th>보라</th><th>금</th></tr>
+          <tr>
+            <td style="text-align:left;">스킬 기본 (레벨 무관)</td>
+            <td><input type="text" id="s-green" value="${numDisplay(s.green)}" placeholder="0"></td>
+            <td><input type="text" id="s-blue" value="${numDisplay(s.blue)}" placeholder="0"></td>
+            <td>—</td><td>—</td>
+          </tr>
+          <tr>
+            <td style="text-align:left;">6레벨까지 추가</td>
+            <td>—</td><td>—</td>
+            <td><input type="text" id="s-to6purple" value="${numDisplay(s.to6purple)}" placeholder="0"></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td style="text-align:left;">10레벨까지 추가(6→10 구간)</td>
+            <td>—</td><td>—</td>
+            <td><input type="text" id="s-to10purple" value="${numDisplay(s.to10purple)}" placeholder="0"></td>
+            <td><input type="text" id="s-to10gold" value="${numDisplay(s.to10gold)}" placeholder="0"></td>
+          </tr>
+          <tr>
+            <td style="text-align:left;">스킬트리 전체 노드 (캐릭터당 1회)</td>
+            <td>—</td>
+            <td><input type="text" id="s-treeBlue" value="${numDisplay(s.treeBlue)}" placeholder="0"></td>
+            <td><input type="text" id="s-treePurple" value="${numDisplay(s.treePurple)}" placeholder="0"></td>
+            <td><input type="text" id="s-treeGold" value="${numDisplay(s.treeGold)}" placeholder="0"></td>
+          </tr>
+        </table>
+        <label class="toggle" style="margin-top:8px;">
+          <input type="checkbox" id="s-includeSix" ${s.includeSixInTen?'checked':''}>
+          10레벨 계산 시 6레벨 구간 보라 재화 포함
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function skillSelect(tr, sd){
+  const v = tr.skills[sd.key];
+  return `
+    <div class="skill-cell">
+      <label>${sd.label}</label>
+      <select class="skill-select" data-key="${sd.key}">
+        <option value="none" ${v==='none'?'selected':''}>사용안함</option>
+        <option value="6" ${v==='6'?'selected':''}>6레벨</option>
+        <option value="10" ${v==='10'?'selected':''}>10레벨</option>
+      </select>
+    </div>
+  `;
+}
+
+function renderTraineeCard(tr){
+  const sub = traineeSubtotal(tr, state.settings);
+  return `
+    <div class="trainee-card ${tr.active?'':'inactive'}" data-id="${tr.id}">
+      <div class="trainee-head">
+        <div>
+          <span class="trainee-name">${escapeHtml(tr.name)}</span>
+          <span class="trainee-tags">${tr.element} · ${tr.weapon}</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <label class="toggle"><input type="checkbox" class="tr-active" ${tr.active?'checked':''}> 육성</label>
+          <label class="toggle"><input type="checkbox" class="tr-fillall" ${tr.fillAll?'checked':''}> 전체 노드</label>
+        </div>
+      </div>
+      <div class="skill-grid">${SKILL_DEFS.map(sd=>skillSelect(tr,sd)).join('')}</div>
+      <div class="foot-row">
+        <button class="btn btn-small btn-danger tr-del">삭제</button>
+        <div class="sub-line">소계: 초록 <b>${sub.green}</b> · 파랑 <b>${sub.blue}</b> · 보라 <b>${sub.purple}</b> · 금 <b>${sub.gold}</b></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTrainTab(){
+  const t = grandTotal();
+  const cardsHtml = state.trainees.length
+    ? state.trainees.map(renderTraineeCard).join('')
+    : `<div class="empty-hint">위에서 캐릭터를 클릭해 육성 목록에 추가하세요.</div>`;
+
+  return `
+    ${renderRosterPanel()}
+    ${renderSettingsPanel()}
+
+    <div class="card">
+      <h2>전체 합계</h2>
+      <div class="totals-grid">
+        <div class="tstat green"><div class="n">${t.green.toLocaleString()}</div><div class="l">초록</div></div>
+        <div class="tstat blue"><div class="n">${t.blue.toLocaleString()}</div><div class="l">파랑</div></div>
+        <div class="tstat purple"><div class="n">${t.purple.toLocaleString()}</div><div class="l">보라</div></div>
+        <div class="tstat gold"><div class="n">${t.gold.toLocaleString()}</div><div class="l">금</div></div>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="export-btn">내보내기 (JSON)</button>
+        <button class="btn" id="import-btn">불러오기 (JSON)</button>
+        <input type="file" id="import-file" accept="application/json" style="display:none;">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>육성 목록 (${state.trainees.length}명)</h2>
+      ${cardsHtml}
+    </div>
+  `;
+}
+
+/* =========================================================
+   육성 파티 탭 (재화 소계 없음, 3인 고정 그룹핑 전용)
+========================================================= */
+function renderPartySlot(party, slotIndex){
+  const assignedId = party.slots[slotIndex];
+  const assigned = assignedId ? state.trainees.find(t=>t.id===assignedId) : null;
+  const optionsHtml = ['<option value="">비어있음</option>']
+    .concat(state.trainees.map(t=>`<option value="${t.id}" ${assignedId===t.id?'selected':''}>${escapeHtml(t.name)}</option>`))
+    .join('');
+  return `
+    <div class="slot" data-pid="${party.id}" data-slot="${slotIndex}">
+      ${assigned ? `<div class="name">${escapeHtml(assigned.name)}</div><div class="note" style="margin:0;">${assigned.element} · ${assigned.weapon}</div>` : `<div class="empty">비어있음</div>`}
+      <select class="slot-select">${optionsHtml}</select>
+    </div>
+  `;
+}
+function renderPartyCard(party){
+  return `
+    <div class="party-card" data-id="${party.id}">
+      <div class="party-head">
+        <input type="text" class="party-name" value="${escapeHtml(party.name)}" style="font-weight:700;">
+        <button class="btn btn-small btn-danger p-del">삭제</button>
+      </div>
+      <div class="party-slots">
+        ${[0,1,2].map(i=>renderPartySlot(party,i)).join('')}
+      </div>
+    </div>
+  `;
+}
+function renderPartyTab(){
+  return `
+    <div class="note" style="margin-bottom:10px;">
+      파티는 재화 계산과 무관하게, 육성 목록에 추가된 캐릭터를 3인 조합으로 정리해두는 용도입니다. 한 캐릭터가 여러 파티에 동시에 들어갈 수 있습니다.
+    </div>
+    ${state.parties.length ? state.parties.map(renderPartyCard).join('') : '<div class="empty-hint">아직 만든 파티가 없습니다.</div>'}
+    <button class="btn btn-gold" id="party-add">+ 파티 추가</button>
+  `;
+}
+
+/* =========================================================
+   이벤트 바인딩
+========================================================= */
+function findTrainee(id){ return state.trainees.find(t=>t.id===id); }
+
+function bindEvents(){
+  const main = document.getElementById('mainArea');
+
+  if(activeTab === 'train'){
+    const search = main.querySelector('#searchInput');
+    if(search) search.addEventListener('input', e=>{ searchQuery = e.target.value; renderAll(); });
+    const grpEl = main.querySelector('#grp-element');
+    if(grpEl) grpEl.addEventListener('click', ()=>{ groupMode='element'; renderAll(); });
+    const grpWp = main.querySelector('#grp-weapon');
+    if(grpWp) grpWp.addEventListener('click', ()=>{ groupMode='weapon'; renderAll(); });
+
+    main.querySelectorAll('.pill').forEach(p=>{
+      p.addEventListener('click', ()=>{
+        const rid = p.dataset.rid;
+        if(state.trainees.some(t=>t.rosterId===rid)){ showToast('이미 추가된 캐릭터입니다'); return; }
+        const c = ROSTER.find(x=>x.id===rid);
+        state.trainees.push({
+          id: uid('tr'), rosterId: c.id, name: c.name, element: c.element, weapon: c.weapon,
+          active: true, fillAll: false,
+          skills: {basic:'none', skill:'none', circuit:'none', liberation:'none', intro:'none'},
+        });
+        scheduleSave('trainees');
+        renderAll();
+      });
+    });
+
+    const settingsToggle = main.querySelector('#settings-toggle');
+    if(settingsToggle) settingsToggle.addEventListener('click', ()=>{ settingsOpen = !settingsOpen; renderAll(); });
+
+    const sFieldMap = {
+      's-green':'green','s-blue':'blue','s-to6purple':'to6purple','s-to10purple':'to10purple',
+      's-to10gold':'to10gold','s-treeBlue':'treeBlue','s-treePurple':'treePurple','s-treeGold':'treeGold',
+    };
+    Object.keys(sFieldMap).forEach(id=>{
+      const el = main.querySelector('#'+id);
+      if(el) el.addEventListener('input', e=>{
+        state.settings[sFieldMap[id]] = parseNum(e.target.value);
+        scheduleSave('settings');
+        renderAll();
+      });
+    });
+    const includeSix = main.querySelector('#s-includeSix');
+    if(includeSix) includeSix.addEventListener('change', e=>{
+      state.settings.includeSixInTen = e.target.checked;
+      scheduleSave('settings');
+      renderAll();
+    });
+
+    main.querySelectorAll('.trainee-card').forEach(card=>{
+      const id = card.dataset.id;
+      const tr = findTrainee(id);
+      if(!tr) return;
+      card.querySelector('.tr-active').addEventListener('change', e=>{ tr.active=e.target.checked; scheduleSave('trainees'); renderAll(); });
+      card.querySelector('.tr-fillall').addEventListener('change', e=>{ tr.fillAll=e.target.checked; scheduleSave('trainees'); renderAll(); });
+      card.querySelectorAll('.skill-select').forEach(sel=>{
+        sel.addEventListener('change', e=>{
+          tr.skills[sel.dataset.key] = e.target.value;
+          scheduleSave('trainees');
+          renderAll();
+        });
+      });
+      const delBtn = card.querySelector('.tr-del');
+      delBtn.addEventListener('click', ()=>{
+        armedClick(delBtn, '삭제', ()=>{
+          state.trainees = state.trainees.filter(x=>x.id!==id);
+          state.parties.forEach(p=>{ p.slots = p.slots.map(s=> s===id ? null : s); });
+          scheduleSave('trainees'); scheduleSave('parties');
+          showToast('삭제되었습니다');
+          renderAll();
+        });
+      });
+    });
+
+    const exportBtn = main.querySelector('#export-btn');
+    if(exportBtn) exportBtn.addEventListener('click', ()=>{
+      const data = JSON.stringify({trainees:state.trainees, parties:state.parties, settings:state.settings}, null, 2);
+      const blob = new Blob([data], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'wuwa_calculator_data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    const importBtn = main.querySelector('#import-btn');
+    const importFile = main.querySelector('#import-file');
+    if(importBtn) importBtn.addEventListener('click', ()=> importFile.click());
+    if(importFile) importFile.addEventListener('change', e=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const parsed = JSON.parse(reader.result);
+          if(parsed.trainees) state.trainees = parsed.trainees;
+          if(parsed.parties) state.parties = parsed.parties;
+          if(parsed.settings) state.settings = parsed.settings;
+          STORAGE_KEYS.forEach(scheduleSave);
+          showToast('불러오기 완료');
+          renderAll();
+        }catch(err){ showToast('JSON 파일을 읽지 못했습니다'); }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  if(activeTab === 'party'){
+    const addBtn = main.querySelector('#party-add');
+    if(addBtn) addBtn.addEventListener('click', ()=>{
+      state.parties.push({id:uid('party'), name:'새 파티', slots:[null,null,null]});
+      scheduleSave('parties');
+      renderAll();
+    });
+    main.querySelectorAll('.party-card').forEach(card=>{
+      const pid = card.dataset.id;
+      const party = state.parties.find(p=>p.id===pid);
+      if(!party) return;
+      card.querySelector('.party-name').addEventListener('input', e=>{ party.name=e.target.value; scheduleSave('parties'); });
+      const delBtn = card.querySelector('.p-del');
+      delBtn.addEventListener('click', ()=>{
+        armedClick(delBtn, '삭제', ()=>{
+          state.parties = state.parties.filter(x=>x.id!==pid);
+          scheduleSave('parties');
+          showToast('파티가 삭제되었습니다');
+          renderAll();
+        });
+      });
+      card.querySelectorAll('.slot').forEach(slotEl=>{
+        const idx = Number(slotEl.dataset.slot);
+        slotEl.querySelector('.slot-select').addEventListener('change', e=>{
+          party.slots[idx] = e.target.value || null;
+          scheduleSave('parties');
+          renderAll();
+        });
+      });
+    });
+  }
+}
+
+/* =========================================================
+   초기화
+========================================================= */
+(async function init(){
+  await loadAll();
+  renderAll();
+})();
+</script>
+</body>
+</html>

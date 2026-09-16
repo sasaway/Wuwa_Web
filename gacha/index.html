@@ -139,9 +139,14 @@
     font-size:12.5px;
   }
   .table-scroll{overflow-x:auto;}
-  .row-excluded{
-    opacity:0.45;
-    text-decoration:line-through;
+  .row-acquired{
+    background:rgba(79,174,122,0.08);
+    color:var(--muted);
+  }
+  .row-acquired td:first-child::after{
+    content:" ✓";
+    color:var(--monthly);
+    font-weight:700;
   }
   .subtotal{
     text-align:right;
@@ -279,27 +284,27 @@ function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9
 
 function defaultDailyWeekly(){
   return [
-    {id:uid('dw'), half:'first',  label:'일일 퀘스트', star:1260, char:0, weapon:0, excluded:false},
-    {id:uid('dw'), half:'first',  label:'주간 퀘스트', star:480,  char:0, weapon:0, excluded:false},
-    {id:uid('dw'), half:'second', label:'일일 퀘스트', star:1260, char:0, weapon:0, excluded:false},
-    {id:uid('dw'), half:'second', label:'주간 퀘스트', star:480,  char:0, weapon:0, excluded:false},
+    {id:uid('dw'), half:'first',  label:'일일 퀘스트', star:1260, char:0, weapon:0, acquired:false},
+    {id:uid('dw'), half:'first',  label:'주간 퀘스트', star:480,  char:0, weapon:0, acquired:false},
+    {id:uid('dw'), half:'second', label:'일일 퀘스트', star:1260, char:0, weapon:0, acquired:false},
+    {id:uid('dw'), half:'second', label:'주간 퀘스트', star:480,  char:0, weapon:0, acquired:false},
   ];
 }
 function defaultMiscIncome(){
   return [
-    {id:uid('mi'), label:'상점 캐릭뽑·무기뽑 구매 (7권+7권)', group:'misc',   star:0,   char:7, weapon:7, excluded:false},
-    {id:uid('mi'), label:'업데이트 보상 및 공방 리딤코드',      group:'misc',   star:900, char:0, weapon:0, excluded:false},
-    {id:uid('mi'), label:'매트릭스',                            group:'matrix', star:400, char:0, weapon:0, excluded:false},
+    {id:uid('mi'), label:'상점 캐릭뽑·무기뽑 구매 (7권+7권)', group:'misc',   star:0,   char:7, weapon:7, acquired:false},
+    {id:uid('mi'), label:'업데이트 보상 및 공방 리딤코드',      group:'misc',   star:900, char:0, weapon:0, acquired:false},
+    {id:uid('mi'), label:'매트릭스',                            group:'matrix', star:400, char:0, weapon:0, acquired:false},
   ];
 }
 function defaultSpendings(){
   return [
-    {id:uid('sp'), label:'월정액',            mode:'combined', group:'auto',    star:2700, char:0,  weapon:0, excluded:false},
-    {id:uid('sp'), label:'패스',              mode:'combined', group:'first',   star:680,  char:5,  weapon:0, excluded:false},
-    {id:uid('sp'), label:'12000캐릭 패키지',  mode:'split', firstStar:500, firstChar:5,  firstWeapon:0, secondStar:500, secondChar:5,  secondWeapon:0, excluded:false},
-    {id:uid('sp'), label:'12000무기 패키지',  mode:'split', firstStar:500, firstChar:0,  firstWeapon:5, secondStar:500, secondChar:0,  secondWeapon:5, excluded:false},
-    {id:uid('sp'), label:'37000캐릭 패키지',  mode:'split', firstStar:500, firstChar:15, firstWeapon:0, secondStar:500, secondChar:15, secondWeapon:0, excluded:false},
-    {id:uid('sp'), label:'월간 패키지',       mode:'combined', group:'monthly', star:500,  char:5,  weapon:5, excluded:false},
+    {id:uid('sp'), label:'월정액',            mode:'combined', group:'auto',    star:2700, char:0,  weapon:0, acquired:false},
+    {id:uid('sp'), label:'패스',              mode:'combined', group:'first',   star:680,  char:5,  weapon:0, acquired:false},
+    {id:uid('sp'), label:'12000캐릭 패키지',  mode:'split', firstStar:500, firstChar:5,  firstWeapon:0, secondStar:500, secondChar:5,  secondWeapon:0, acquired:false},
+    {id:uid('sp'), label:'12000무기 패키지',  mode:'split', firstStar:500, firstChar:0,  firstWeapon:5, secondStar:500, secondChar:0,  secondWeapon:5, acquired:false},
+    {id:uid('sp'), label:'37000캐릭 패키지',  mode:'split', firstStar:500, firstChar:15, firstWeapon:0, secondStar:500, secondChar:15, secondWeapon:0, acquired:false},
+    {id:uid('sp'), label:'월간 패키지',       mode:'combined', group:'monthly', star:500,  char:5,  weapon:5, acquired:false},
   ];
 }
 function defaultVersions(){
@@ -509,7 +514,7 @@ function armedClick(btn, originalLabel, onConfirm){
 function sumIncome(){
   const total = {star:0, char:0, weapon:0};
   const addItem = (it)=>{
-    if(it.excluded) return;
+    if(it.acquired) return;
     total.star += Number(it.star||0);
     total.char += Number(it.char||0);
     total.weapon += Number(it.weapon||0);
@@ -518,7 +523,7 @@ function sumIncome(){
   state.miscIncome.forEach(addItem); // 매트릭스 포함 — group과 무관하게 전부 합산
   state.eventIncome.forEach(addItem);
   state.spendings.forEach(it=>{
-    if(it.excluded) return;
+    if(it.acquired) return;
     if(it.mode === 'split'){
       total.star += Number(it.firstStar||0) + Number(it.secondStar||0);
       total.char += Number(it.firstChar||0) + Number(it.secondChar||0);
@@ -843,28 +848,28 @@ function renderPlanTab(){
 ========================================================= */
 function dwRows(half){
   return state.dailyWeekly.filter(x=>x.half===half).map(x=>`
-    <tr data-id="${x.id}" class="${x.excluded?'row-excluded':''}">
+    <tr data-id="${x.id}" class="${x.acquired?'row-acquired':''}">
       <td style="text-align:left;">${escapeHtml(x.label)}</td>
       <td>${x.star.toLocaleString()}</td>
-      <td><input type="checkbox" class="dw-toggle" ${x.excluded?'checked':''}></td>
+      <td><input type="checkbox" class="dw-toggle" ${x.acquired?'checked':''}></td>
     </tr>
   `).join('');
 }
 function miscRows(){
   return state.miscIncome.filter(x=>x.group!=='matrix').map(x=>`
-    <tr data-id="${x.id}" class="${x.excluded?'row-excluded':''}">
+    <tr data-id="${x.id}" class="${x.acquired?'row-acquired':''}">
       <td style="text-align:left;">${escapeHtml(x.label)}</td>
       <td>${x.star.toLocaleString()}</td>
       <td>${x.char.toLocaleString()}</td>
       <td>${x.weapon.toLocaleString()}</td>
-      <td><input type="checkbox" class="mi-toggle" ${x.excluded?'checked':''}></td>
+      <td><input type="checkbox" class="mi-toggle" ${x.acquired?'checked':''}></td>
     </tr>
   `).join('');
 }
 function eventRows(half){
   const items = state.eventIncome.filter(x=>x.half===half);
   return items.map(x=>`
-    <tr data-id="${x.id}" class="${x.excluded?'row-excluded':''}">
+    <tr data-id="${x.id}" class="${x.acquired?'row-acquired':''}">
       <td><input type="text" class="ev-label" value="${escapeHtml(x.label||'')}"></td>
       <td><input type="text" inputmode="numeric" class="ev-star" placeholder="0" value="${numDisplay(x.star)}"></td>
       <td><input type="text" inputmode="numeric" class="ev-char" placeholder="0" value="${numDisplay(x.char)}"></td>
@@ -883,10 +888,10 @@ function renderIncomeTab(){
       <div>
         <div class="half-header first">전반부</div>
         <div class="section-title">일일·주간 퀘스트</div>
-        <table><tr><th style="text-align:left;">항목</th><th>별의 소리</th><th>제외</th></tr>${dwRows('first')}</table>
+        <table><tr><th style="text-align:left;">항목</th><th>별의 소리</th><th>습득</th></tr>${dwRows('first')}</table>
 
         <div class="section-title">기타 수급</div>
-        <table><tr><th style="text-align:left;">항목</th><th>별</th><th>캐</th><th>무</th><th>제외</th></tr>${miscRows()}</table>
+        <table><tr><th style="text-align:left;">항목</th><th>별</th><th>캐</th><th>무</th><th>습득</th></tr>${miscRows()}</table>
 
         <div class="section-title">이벤트 수급</div>
         <div class="table-scroll"><table><tr><th>항목</th><th>별</th><th>캐</th><th>무</th><th></th><th></th></tr>${eventRows('first')}</table></div>
@@ -895,7 +900,7 @@ function renderIncomeTab(){
       <div>
         <div class="half-header second">후반부</div>
         <div class="section-title">일일·주간 퀘스트</div>
-        <table><tr><th style="text-align:left;">항목</th><th>별의 소리</th><th>제외</th></tr>${dwRows('second')}</table>
+        <table><tr><th style="text-align:left;">항목</th><th>별의 소리</th><th>습득</th></tr>${dwRows('second')}</table>
 
         <div class="section-title">이벤트 수급</div>
         <div class="table-scroll"><table><tr><th>항목</th><th>별</th><th>캐</th><th>무</th><th></th><th></th></tr>${eventRows('second')}</table></div>
@@ -910,8 +915,8 @@ function renderIncomeTab(){
       <table style="margin-top:8px;">
         <tr>
           <td style="text-align:left;">매트릭스 (별의 소리 400)</td>
-          <td><input type="checkbox" id="matrix-toggle" ${matrix && matrix.excluded ? 'checked' : ''}></td>
-          <td style="text-align:left;color:var(--muted);font-size:11px;">체크 시 계산에서 제외</td>
+          <td><input type="checkbox" id="matrix-toggle" ${matrix && matrix.acquired ? 'checked' : ''}></td>
+          <td style="text-align:left;color:var(--muted);font-size:11px;">이미 습득했으면 체크 (계산에서 제외)</td>
         </tr>
       </table>
     </div>
@@ -924,7 +929,7 @@ function renderIncomeTab(){
    5. 과금 내역 탭
 ========================================================= */
 function splitSubtotal(half){
-  return state.spendings.filter(x=>x.mode==='split' && !x.excluded)
+  return state.spendings.filter(x=>x.mode==='split' && !x.acquired)
     .reduce((acc,x)=>{
       acc.star += Number(x[half+'Star']||0);
       acc.char += Number(x[half+'Char']||0);
@@ -933,7 +938,7 @@ function splitSubtotal(half){
     }, {star:0,char:0,weapon:0});
 }
 function groupSubtotal(group){
-  return state.spendings.filter(x=>x.mode==='combined' && x.group===group && !x.excluded)
+  return state.spendings.filter(x=>x.mode==='combined' && x.group===group && !x.acquired)
     .reduce((acc,x)=>{
       acc.star += Number(x.star||0);
       acc.char += Number(x.char||0);
@@ -944,22 +949,22 @@ function groupSubtotal(group){
 function renderSplitTable(half){
   const items = state.spendings.filter(x=>x.mode==='split');
   const rows = items.map(x=>`
-    <tr data-id="${x.id}" class="${x.excluded?'row-excluded':''}">
+    <tr data-id="${x.id}" class="${x.acquired?'row-acquired':''}">
       <td style="text-align:left;">${escapeHtml(x.label)}</td>
       <td><input type="text" inputmode="numeric" class="sp-star" data-half="${half}" placeholder="0" value="${numDisplay(x[half+'Star'])}"></td>
       <td><input type="text" inputmode="numeric" class="sp-char" data-half="${half}" placeholder="0" value="${numDisplay(x[half+'Char'])}"></td>
       <td><input type="text" inputmode="numeric" class="sp-weapon" data-half="${half}" placeholder="0" value="${numDisplay(x[half+'Weapon'])}"></td>
-      <td><input type="checkbox" class="sp-toggle" ${x.excluded?'checked':''}></td>
+      <td><input type="checkbox" class="sp-toggle" ${x.acquired?'checked':''}></td>
     </tr>
   `).join('') || `<tr><td colspan="5" class="empty-hint">항목 없음</td></tr>`;
   const sub = splitSubtotal(half);
-  return `<table><tr><th style="text-align:left;">항목</th><th>별</th><th>캐</th><th>무</th><th>제외</th></tr>${rows}</table>
+  return `<table><tr><th style="text-align:left;">항목</th><th>별</th><th>캐</th><th>무</th><th>습득</th></tr>${rows}</table>
   <div class="subtotal">소계: 별 <b>${sub.star.toLocaleString()}</b> · 캐 <b>${sub.char.toLocaleString()}</b> · 무 <b>${sub.weapon.toLocaleString()}</b></div>`;
 }
 function renderGroupTable(group){
   const items = state.spendings.filter(x=>x.mode==='combined' && x.group===group);
   const rows = items.map(x=>`
-    <tr data-id="${x.id}" class="${x.excluded?'row-excluded':''}">
+    <tr data-id="${x.id}" class="${x.acquired?'row-acquired':''}">
       <td style="text-align:left;">${escapeHtml(x.label)}</td>
       <td><input type="text" inputmode="numeric" class="sp-c-star" placeholder="0" value="${numDisplay(x.star)}"></td>
       <td><input type="text" inputmode="numeric" class="sp-c-char" placeholder="0" value="${numDisplay(x.char)}"></td>
@@ -972,11 +977,11 @@ function renderGroupTable(group){
           <option value="monthly" ${x.group==='monthly'?'selected':''}>월간패키지</option>
         </select>
       </td>
-      <td><input type="checkbox" class="sp-c-toggle" ${x.excluded?'checked':''}></td>
+      <td><input type="checkbox" class="sp-c-toggle" ${x.acquired?'checked':''}></td>
     </tr>
   `).join('') || `<tr><td colspan="6" class="empty-hint">항목 없음</td></tr>`;
   const sub = groupSubtotal(group);
-  return `<table><tr><th style="text-align:left;">항목</th><th>별</th><th>캐</th><th>무</th><th>그룹</th><th>제외</th></tr>${rows}</table>
+  return `<table><tr><th style="text-align:left;">항목</th><th>별</th><th>캐</th><th>무</th><th>그룹</th><th>습득</th></tr>${rows}</table>
   <div class="subtotal">소계: 별 <b>${sub.star.toLocaleString()}</b> · 캐 <b>${sub.char.toLocaleString()}</b> · 무 <b>${sub.weapon.toLocaleString()}</b></div>`;
 }
 
@@ -1114,7 +1119,7 @@ function bindTabEvents(){
       cb.addEventListener('change', e=>{
         const row = e.target.closest('tr');
         const item = findById(state.dailyWeekly, row.dataset.id);
-        item.excluded = e.target.checked;
+        item.acquired = e.target.checked;
         scheduleSave('dailyWeekly');
         renderAll();
       });
@@ -1123,14 +1128,14 @@ function bindTabEvents(){
       cb.addEventListener('change', e=>{
         const row = e.target.closest('tr');
         const item = findById(state.miscIncome, row.dataset.id);
-        item.excluded = e.target.checked;
+        item.acquired = e.target.checked;
         scheduleSave('miscIncome');
         renderAll();
       });
     });
     main.querySelectorAll('.ev-add').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        state.eventIncome.push({id:uid('ev'), label:'', half:btn.dataset.half, star:0, char:0, weapon:0, excluded:false});
+        state.eventIncome.push({id:uid('ev'), label:'', half:btn.dataset.half, star:0, char:0, weapon:0, acquired:false});
         scheduleSave('eventIncome');
         renderAll();
       });
@@ -1159,7 +1164,7 @@ function bindTabEvents(){
     if(matrixToggle){
       matrixToggle.addEventListener('change', e=>{
         const m = state.miscIncome.find(x=>x.group==='matrix');
-        if(m){ m.excluded = e.target.checked; scheduleSave('miscIncome'); renderAll(); }
+        if(m){ m.acquired = e.target.checked; scheduleSave('miscIncome'); renderAll(); }
       });
     }
     const resetBtn = main.querySelector('#income-reset');
@@ -1191,7 +1196,7 @@ function bindTabEvents(){
       cb.addEventListener('change', e=>{
         const row = e.target.closest('tr');
         const item = findById(state.spendings, row.dataset.id);
-        item.excluded = e.target.checked;
+        item.acquired = e.target.checked;
         scheduleSave('spendings');
         renderAll();
       });
@@ -1219,7 +1224,7 @@ function bindTabEvents(){
       cb.addEventListener('change', e=>{
         const row = e.target.closest('tr');
         const item = findById(state.spendings, row.dataset.id);
-        item.excluded = e.target.checked;
+        item.acquired = e.target.checked;
         scheduleSave('spendings');
         renderAll();
       });

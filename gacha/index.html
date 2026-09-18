@@ -3,267 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>명조 가챠 계획 시뮬레이터</title>
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07141B">
+<title>가챠 계획 시뮬레이터 | Fair Winds</title>
+<meta name="description" content="보유·수급 재화로 다음 픽업까지 뽑기가 가능한지 계산하는 명조 비공식 도구입니다.">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="../assets/fairwinds.css">
 <style>
-  :root{
-    --bg:#0f1420;
-    --panel:#161d2e;
-    --panel2:#1c2438;
-    --border:#2a3350;
-    --text:#e8e6df;
-    --muted:#8b93a7;
-    --gold:#d4af6a;
-    --gold-dim:#a68a52;
-    --first:#4a90d9;
-    --second:#e0954e;
-    --auto:#9b6fd1;
-    --monthly:#4fae7a;
-    --endcontent:#d968a0;
-    --danger:#d9534f;
-    --danger-dim:#8a3a37;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:var(--bg);
-    color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Malgun Gothic",sans-serif;
-    font-size:14px;
-    line-height:1.5;
-    padding-bottom:70px;
-  }
-  header{
-    padding:16px 16px 0;
-    max-width:960px;
-    margin:0 auto;
-  }
-  h1{
-    font-size:18px;
-    color:var(--gold);
-    margin:0 0 12px;
-    font-weight:700;
-  }
-  nav.tabs{
-    display:flex;
-    gap:4px;
-    overflow-x:auto;
-    border-bottom:1px solid var(--border);
-  }
-  nav.tabs button{
-    background:none;
-    border:none;
-    color:var(--muted);
-    padding:10px 14px;
-    font-size:13px;
-    cursor:pointer;
-    white-space:nowrap;
-    border-bottom:2px solid transparent;
-  }
-  nav.tabs button.active{
-    color:var(--gold);
-    border-bottom-color:var(--gold);
-    font-weight:600;
-  }
-  main{
-    max-width:960px;
-    margin:0 auto;
-    padding:16px;
-  }
-  .card{
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:8px;
-    padding:14px;
-    margin-bottom:14px;
-  }
-  .card h2{
-    font-size:14px;
-    margin:0 0 10px;
-    color:var(--text);
-  }
   .half-header{
-    padding:8px 12px;
-    border-radius:6px;
+    --hh:var(--first);
+    padding:12px 18px;
+    border-radius:16px;
     font-weight:700;
-    font-size:13px;
-    margin:18px 0 10px;
-    color:#0f1420;
+    font-size:14px;
+    margin:32px 0 14px;
+    color:var(--text);
+    background:color-mix(in srgb, var(--hh) 12%, transparent);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--hh) 32%, transparent), inset 4px 0 0 var(--hh);
   }
   .half-header:first-child{margin-top:0;}
-  .half-header.first{background:var(--first);}
-  .half-header.second{background:var(--second);}
-  .half-header.auto{background:var(--auto);}
-  .half-header.monthly{background:var(--monthly);}
-  .half-header.endcontent{background:var(--endcontent);}
-  .section-title{
-    font-size:13px;
-    font-weight:600;
-    color:var(--muted);
-    margin:14px 0 6px;
-  }
-  .grid2{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:14px;
-  }
-  @media (max-width:640px){
-    .grid2{grid-template-columns:1fr;}
-  }
-  table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:12.5px;
-  }
-  th,td{
-    padding:6px 6px;
-    text-align:center;
-    border-bottom:1px solid var(--border);
-  }
-  th{color:var(--muted);font-weight:600;}
-  td input[type=text],td input[type=number],td input[type=date]{
-    width:100%;
-    background:var(--panel2);
-    border:1px solid var(--border);
-    color:var(--text);
-    border-radius:4px;
-    padding:4px 6px;
-    font-size:12.5px;
-  }
-  input[type=date]{color-scheme:dark;}
-  select{
-    background:var(--panel2);
-    border:1px solid var(--border);
-    color:var(--text);
-    border-radius:4px;
-    padding:4px 6px;
-    font-size:12.5px;
-  }
-  .table-scroll{overflow-x:auto;}
-  .row-acquired{
-    background:rgba(79,174,122,0.08);
-    color:var(--muted);
-  }
-  .row-acquired td:first-child::after{
-    content:" ✓";
-    color:var(--monthly);
-    font-weight:700;
-  }
-  .subtotal{
-    text-align:right;
-    font-size:12px;
-    color:var(--muted);
-    margin-top:6px;
-  }
-  .subtotal b{color:var(--gold);}
-  button.btn{
-    background:var(--panel2);
-    border:1px solid var(--border);
-    color:var(--text);
-    padding:7px 12px;
-    border-radius:6px;
-    cursor:pointer;
-    font-size:12.5px;
-  }
-  button.btn:hover{border-color:var(--gold-dim);}
-  button.btn-gold{
-    background:var(--gold);
-    color:#1a1608;
-    border:none;
-    font-weight:700;
-  }
-  button.btn-danger{
-    background:var(--danger-dim);
-    border:1px solid var(--danger);
-    color:#fff;
-  }
-  button.btn-small{
-    padding:3px 8px;
-    font-size:11px;
-  }
-  .row-add{margin-top:8px;}
-  .banner{
-    border-radius:8px;
-    padding:12px;
-    margin-bottom:10px;
-  }
-  .banner.hope{background:rgba(79,174,122,0.15);border:1px solid var(--monthly);}
-  .banner.despair{background:rgba(217,83,79,0.15);border:1px solid var(--danger);}
-  .banner-title{font-weight:700;margin-bottom:6px;}
-  .banner.hope .banner-title{color:var(--monthly);}
-  .banner.despair .banner-title{color:var(--danger);}
-  .stat-line{display:flex;justify-content:space-between;padding:2px 0;font-size:12.5px;}
-  .stat-line .v{color:var(--gold);font-weight:600;}
-  .surplus-pos{color:var(--monthly);}
-  .surplus-neg{color:var(--danger);}
-  .footer-fixed{
-    position:fixed;
-    bottom:0;left:0;right:0;
-    background:var(--panel);
-    border-top:1px solid var(--border);
-    padding:10px 16px;
-    display:flex;
-    justify-content:center;
-  }
-  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-  .cal-nav span{font-weight:700;color:var(--gold);}
-  .cal-grid{
-    display:grid;
-    grid-template-columns:repeat(7,1fr);
-    gap:2px;
-  }
-  .cal-cell{
-    min-height:56px;
-    background:var(--panel2);
-    border-radius:4px;
-    padding:3px;
-    font-size:10.5px;
-    position:relative;
-  }
+  .half-header.first{--hh:var(--first);}
+  .half-header.second{--hh:var(--second);}
+  .half-header.auto{--hh:var(--auto);}
+  .half-header.monthly{--hh:var(--monthly);}
+  .half-header.endcontent{--hh:var(--endcontent);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  @media (max-width:720px){.grid2{grid-template-columns:1fr;}}
+
+  .row-acquired{background:rgba(95,203,154,0.07);color:var(--muted);}
+  .row-acquired td:first-child::after{content:" ✓";color:var(--ok);font-weight:700;}
+  .subtotal{text-align:right;font-size:12.5px;color:var(--muted);margin-top:8px;}
+  .subtotal b{color:var(--text);font-weight:600;}
+
+  .banner{border-radius:18px;padding:16px 18px;margin-bottom:12px;}
+  .banner.hope{background:rgba(95,203,154,0.09);box-shadow:inset 0 0 0 1px rgba(95,203,154,0.42);}
+  .banner.despair{background:rgba(227,107,98,0.09);box-shadow:inset 0 0 0 1px rgba(227,107,98,0.45);}
+  .banner-title{font-weight:700;margin-bottom:8px;}
+  .banner.hope .banner-title{color:var(--ok);}
+  .banner.despair .banner-title{color:#F2A29B;}
+  .stat-line{display:flex;justify-content:space-between;gap:16px;padding:4px 0;font-size:14px;}
+  .stat-line .v{color:var(--text);font-weight:600;white-space:nowrap;}
+  .stat-line .v.surplus-pos{color:var(--ok);}
+  .stat-line .v.surplus-neg{color:var(--bad);}
+
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .cal-nav span{font-family:var(--font-display);font-weight:600;font-size:16px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-cell{min-height:60px;background:rgba(255,255,255,0.03);border-radius:10px;padding:5px;font-size:11px;position:relative;}
   .cal-cell .d{color:var(--muted);}
   .cal-cell.empty{background:transparent;}
-  .cal-bar{
-    height:5px;
-    border-radius:3px;
-    margin-top:2px;
-  }
+  .cal-bar{height:5px;border-radius:3px;margin-top:3px;}
   .cal-bar.toa{background:var(--gold);}
   .cal-bar.whiwa{background:#6ecff0;}
-  .cal-chip{
-    background:var(--auto);
-    color:#fff;
-    border-radius:3px;
-    padding:1px 3px;
-    font-size:9px;
-    margin-top:2px;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .cal-legend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-top:8px;flex-wrap:wrap;}
-  .cal-legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle;}
-  .note{font-size:11.5px;color:var(--muted);margin-top:6px;}
-  .toast{
-    position:fixed;bottom:70px;right:16px;
-    background:var(--panel2);border:1px solid var(--gold-dim);
-    color:var(--text);padding:8px 14px;border-radius:6px;
-    font-size:12.5px;opacity:0;transition:opacity .3s;
-    pointer-events:none;z-index:99;
-  }
-  .toast.show{opacity:1;}
-  .empty-hint{color:var(--muted);font-size:12px;padding:8px 0;}
+  .cal-chip{background:var(--auto);color:#07141B;font-weight:600;border-radius:4px;padding:1px 4px;font-size:10px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cal-legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:12px;flex-wrap:wrap;}
+  .cal-legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle;}
+
+  .reset-note{max-width:44ch;}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-wind" viewBox="0 0 256 256" fill="currentColor"><path d="M182,184a30,30,0,0,1-30,30c-12.9,0-25.36-8.38-29.63-19.92a6,6,0,0,1,11.26-4.16C136.13,196.69,144.2,202,152,202a18,18,0,0,0,0-36H40a6,6,0,0,1,0-12H152A30,30,0,0,1,182,184ZM150,72a30,30,0,0,0-30-30c-12.9,0-25.36,8.38-29.63,19.92a6,6,0,1,0,11.26,4.16C104.13,59.31,112.2,54,120,54a18,18,0,0,1,0,36H24a6,6,0,0,0,0,12h96A30,30,0,0,0,150,72Zm58,2c-12.9,0-25.36,8.38-29.63,19.92a6,6,0,1,0,11.26,4.16C192.13,91.31,200.2,86,208,86a18,18,0,0,1,0,36H32a6,6,0,0,0,0,12H208a30,30,0,0,0,0-60Z"/></symbol></svg>
 
-<header>
-  <h1>명조 가챠 계획 시뮬레이터 — 프로토타입 v1</h1>
-  <nav class="tabs" id="tabNav"></nav>
+<header class="app-header">
+  <div class="brand-row">
+    <a class="brand" href="../" aria-label="Fair Winds 홈으로">
+      <span class="brand-mark"><svg aria-hidden="true"><use href="#i-wind"/></svg></span>
+      <span class="brand-name">Fair Winds<span class="brand-sub">명조 비공식 플래너</span></span>
+    </a>
+  </div>
+  <h1 class="page-title">가챠 계획 시뮬레이터</h1>
+  <p class="page-lede">보유·수급 재화로 다음 픽업까지 뽑기가 가능한지 계산합니다.</p>
+  <nav class="tabs" id="tabNav" aria-label="가챠 계획 메뉴"></nav>
 </header>
 <main id="mainArea"></main>
-<div class="footer-fixed">
+<footer class="app-footer">
+  <p class="reset-note">모든 입력을 기본값으로 되돌립니다. 현재 상태 선택(버전, 반기)은 유지됩니다.</p>
   <button class="btn btn-danger" id="resetAllBtn">기본값으로 복구</button>
-</div>
-<div class="toast" id="toast"></div>
+</footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* =========================================================
@@ -614,28 +437,66 @@ const TABS = [
 ];
 let activeTab = 'main';
 
+function playViewEnter(){
+  const m = document.getElementById('mainArea');
+  m.classList.remove('view-enter');
+  void m.offsetWidth;
+  m.classList.add('view-enter');
+}
+
 function renderNav(){
   const nav = document.getElementById('tabNav');
   nav.innerHTML = TABS.map(t=>
-    `<button data-tab="${t.id}" class="${t.id===activeTab?'active':''}">${t.label}</button>`
+    `<button data-tab="${t.id}" class="${t.id===activeTab?'active':''}"${t.id===activeTab?' aria-current="page"':''}>${t.label}</button>`
   ).join('');
   nav.querySelectorAll('button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       activeTab = btn.dataset.tab;
       renderAll();
+      playViewEnter();
     });
+  });
+}
+
+/* 입력 중 화면을 다시 그려도 포커스와 커서 위치가 유지되도록 저장/복원 */
+const FOCUS_SEL = 'input[type=text],input[type=date],input:not([type]),select,textarea';
+function captureFocus(root){
+  const a = document.activeElement;
+  if(!a || !root.contains(a) || !a.matches(FOCUS_SEL)) return null;
+  const idx = [...root.querySelectorAll('input,select,textarea')].indexOf(a);
+  return idx < 0 ? null : {idx, s:a.selectionStart, e:a.selectionEnd};
+}
+function restoreFocus(root, f){
+  if(!f) return;
+  const el = [...root.querySelectorAll('input,select,textarea')][f.idx];
+  if(!el) return;
+  el.focus({preventScroll:true});
+  try{ if(f.s != null) el.setSelectionRange(f.s, f.e); }catch(_){ /* select/date 등은 무시 */ }
+}
+
+/* 좁은 화면에서 표가 찌그러지지 않도록 가로 스크롤 래퍼로 감쌈 */
+function wrapTables(root){
+  root.querySelectorAll('table').forEach(t=>{
+    if(t.parentElement.classList.contains('table-scroll')) return;
+    const w = document.createElement('div');
+    w.className = 'table-scroll';
+    t.parentNode.insertBefore(w, t);
+    w.appendChild(t);
   });
 }
 
 function renderAll(){
   renderNav();
   const main = document.getElementById('mainArea');
+  const f = captureFocus(main);
   if(activeTab === 'main') main.innerHTML = renderMainTab();
   else if(activeTab === 'schedule') main.innerHTML = renderScheduleTab();
   else if(activeTab === 'plan') main.innerHTML = renderPlanTab();
   else if(activeTab === 'income') main.innerHTML = renderIncomeTab();
   else if(activeTab === 'spending') main.innerHTML = renderSpendingTab();
+  wrapTables(main);
   bindTabEvents();
+  restoreFocus(main, f);
 }
 
 /* =========================================================
@@ -926,7 +787,7 @@ function renderIncomeTab(){
     <div class="half-header endcontent">엔드컨텐츠</div>
     <div class="card">
       <div class="stat-line"><span>역경의 탑·해역 초기화 보너스 (다음 픽업까지, 자동 계산)</span><span class="v">${bonus.toLocaleString()}</span></div>
-      <div class="note">다음 픽업이 후반부 소속이거나 등록된 픽업이 없으면 0으로 계산됩니다. (가장 가까운 픽업 1개만 기준으로 판단하는 단순 버전 — 개선 여지 있음)</div>
+      <div class="note">다음 픽업이 후반부 소속이거나 등록된 픽업이 없으면 0으로 계산됩니다. (가장 가까운 픽업 1개만 기준으로 판단하는 단순 버전입니다)</div>
       <table style="margin-top:8px;">
         <tr>
           <td style="text-align:left;">매트릭스 (별의 소리 400)</td>
@@ -1329,13 +1190,13 @@ async function fetchScheduleData(){
       const el = statusEl();
       if(el) el.textContent = (toa||whiwa)
         ? 'encore.moe API에서 시즌 데이터를 불러왔습니다.'
-        : 'API 응답을 해석하지 못했습니다 — 실제 응답 스키마 확인 필요(현재 폴백 데이터 없음, 픽업 일정은 수동 관리).';
+        : 'API 응답을 해석하지 못했습니다. 픽업 일정은 아래 표에서 직접 관리하세요.';
       renderAll();
     }
   }catch(e){
     if(activeTab === 'schedule'){
       const el = statusEl();
-      if(el) el.textContent = 'API 호출 실패 — 네트워크/CORS 확인 필요(현재 폴백 데이터 없음, 픽업 일정은 수동 관리).';
+      if(el) el.textContent = 'API 호출에 실패했습니다. 저장된 시즌 데이터로 표시합니다.';
     }
   }
 }

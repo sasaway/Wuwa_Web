@@ -239,7 +239,7 @@ function normalize(key, value){
       const rosterId = safeId(hasOwn(LEGACY_ROSTER_IDS, t.rosterId) ? LEGACY_ROSTER_IDS[t.rosterId] : t.rosterId);
       const r = ROSTER.find(x=>x.id===rosterId);
       const sk = (t.skills && typeof t.skills === 'object') ? t.skills : {};
-      const savedPos = POSITIONS.includes(t.position) ? t.position : null;
+      const savedPos = (POSITIONS.includes(t.position) || t.position === 'unset') ? t.position : null;
       return {
         id: safeId(t.id),
         rosterId,
@@ -292,10 +292,21 @@ async function loadAll(){
 function scheduleSave(key){
   clearTimeout(saveTimers[key]);
   saveTimers[key] = setTimeout(async ()=>{
+    delete saveTimers[key];
     try{ await storageAdapter.set(key, JSON.stringify(state[key])); }
     catch(e){ showToast('저장 실패: '+key); }
   }, 500);
 }
+/* 0.5초 대기 중에 탭을 닫거나 숨기면 남은 저장을 바로 실행 */
+function flushSaves(){
+  Object.keys(saveTimers).forEach(key=>{
+    clearTimeout(saveTimers[key]);
+    delete saveTimers[key];
+    try{ storageAdapter.set(key, JSON.stringify(state[key])); }catch(e){ /* 떠나는 중이라 알릴 곳이 없음 */ }
+  });
+}
+window.addEventListener('pagehide', flushSaves);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') flushSaves(); });
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -738,7 +749,7 @@ function bindEvents(){
       const a = document.createElement('a');
       a.href = url; a.download = 'wuwa_calculator_data.json';
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
     });
     const importBtn = main.querySelector('#import-btn');
     const importFile = main.querySelector('#import-file');

@@ -300,7 +300,7 @@ function normalize(key, value, fallback){
         })),
       }));
     }
-    return items.map(x=> x.id ? x : {...x, id:uid('it')});
+    return items.map(x=> (x.id != null && x.id !== '') ? {...x, id:String(x.id)} : {...x, id:uid('it')});
   }
   if(key === 'holdings'){
     const h = isObj(value) ? value : {};
@@ -429,8 +429,8 @@ function getNextBanner(){
 function resetDates(seasons){
   const set = new Set();
   (seasons||[]).forEach(s=>{
-    if(s.start) set.add(s.start);
-    if(s.finish) set.add(s.finish);
+    if(s.start) set.add(String(s.start).slice(0,10));
+    if(s.finish) set.add(String(s.finish).slice(0,10));
   });
   return [...set];
 }
@@ -1218,7 +1218,10 @@ async function fetchScheduleData(){
   }catch(e){
     fetchStatusText = 'API 호출에 실패했습니다. 저장된 시즌 데이터로 표시합니다.';
   }
-  renderAll();
+  /* 글자 입력 중(한글 조합 포함)이면 다시 그리지 않는다. 결과는 다음 렌더 때 반영된다. */
+  const a = document.activeElement;
+  const typing = a && a.matches('input[type=text],input:not([type])') && document.getElementById('mainArea').contains(a);
+  if(!typing) renderAll();
 }
 
 /* =========================================================

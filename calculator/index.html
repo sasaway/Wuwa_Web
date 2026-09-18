@@ -118,68 +118,70 @@ const storageAdapter = hasArtifactStorage ? {
 
 /* =========================================================
    로스터 (58명 — element/weapon type은 공개 캐릭터 DB 기준으로 검증.
-   이름은 한국어 공식 표기를 확인하지 못해 영문 표기 그대로 둠.
-   encore.moe 기반 정확한 한국어 로스터가 있으면 이 배열만 통째로 교체하면 됨) */
+   name은 encore.moe(ko/en 로케일 대조)로 확인한 한국어 공식 표기로 교체함(2026-09-18).
+   position은 커뮤니티에 널리 알려진 통상적 포지션 기본값 — 계산기 UI에서 캐릭터별로 수정 가능) */
 const ROSTER = [
-  {name:'Sanhua', element:'응결', weapon:'직검'},
-  {name:'Baizhi', element:'응결', weapon:'증폭기'},
-  {name:'Lingyang', element:'응결', weapon:'권갑'},
-  {name:'Zhezhi', element:'응결', weapon:'증폭기'},
-  {name:'Youhu', element:'응결', weapon:'권갑'},
-  {name:'Carlotta', element:'응결', weapon:'권총'},
-  {name:'Lucilla', element:'응결', weapon:'증폭기'},
-  {name:'Hiyuki', element:'응결', weapon:'직검'},
-  {name:'Suisui', element:'응결', weapon:'증폭기'},
-  {name:'Chixia', element:'용융', weapon:'권총'},
-  {name:'Encore', element:'용융', weapon:'증폭기'},
-  {name:'Mortefi', element:'용융', weapon:'권총'},
-  {name:'Changli', element:'용융', weapon:'직검'},
-  {name:'Brant', element:'용융', weapon:'직검'},
-  {name:'Lupa', element:'용융', weapon:'대검'},
-  {name:'Galbrena', element:'용융', weapon:'권총'},
-  {name:'Mornye', element:'용융', weapon:'대검'},
-  {name:'Aemeath', element:'용융', weapon:'직검'},
-  {name:'Denia', element:'용융', weapon:'증폭기'},
-  {name:'Jingran', element:'용융', weapon:'대검'},
-  {name:'Calcharo', element:'전도', weapon:'대검'},
-  {name:'Yinlin', element:'전도', weapon:'증폭기'},
-  {name:'Yuanwu', element:'전도', weapon:'권갑'},
-  {name:'Xiangli Yao', element:'전도', weapon:'권갑'},
-  {name:'Lumi', element:'전도', weapon:'대검'},
-  {name:'Augusta', element:'전도', weapon:'대검'},
-  {name:'Buling', element:'전도', weapon:'증폭기'},
-  {name:'Rebecca', element:'전도', weapon:'권총'},
-  {name:'Rover(전도)', element:'전도', weapon:'직검'},
-  {name:'Yangyang', element:'기류', weapon:'직검'},
-  {name:'Aalto', element:'기류', weapon:'권총'},
-  {name:'Jiyan', element:'기류', weapon:'대검'},
-  {name:'Jianxin', element:'기류', weapon:'권갑'},
-  {name:'Ciaccona', element:'기류', weapon:'권총'},
-  {name:'Rover(기류)', element:'기류', weapon:'직검'},
-  {name:'Cartethyia', element:'기류', weapon:'직검'},
-  {name:'Iuno', element:'기류', weapon:'권갑'},
-  {name:'Qiuyuan', element:'기류', weapon:'직검'},
-  {name:'Sigrika', element:'기류', weapon:'권갑'},
-  {name:'Qingxiao', element:'기류', weapon:'직검'},
-  {name:'Verina', element:'회절', weapon:'증폭기'},
-  {name:'Rover(회절)', element:'회절', weapon:'직검'},
-  {name:'Jinhsi', element:'회절', weapon:'대검'},
-  {name:'Shorekeeper', element:'회절', weapon:'증폭기'},
-  {name:'Phoebe', element:'회절', weapon:'증폭기'},
-  {name:'Zani', element:'회절', weapon:'권갑'},
-  {name:'Lynae', element:'회절', weapon:'권총'},
-  {name:'Luuk Herssen', element:'회절', weapon:'권갑'},
-  {name:'Lucy', element:'회절', weapon:'권총'},
-  {name:'Taoqi', element:'인멸', weapon:'대검'},
-  {name:'Danjin', element:'인멸', weapon:'직검'},
-  {name:'Camellya', element:'인멸', weapon:'직검'},
-  {name:'Rover(인멸)', element:'인멸', weapon:'직검'},
-  {name:'Roccia', element:'인멸', weapon:'권갑'},
-  {name:'Cantarella', element:'인멸', weapon:'증폭기'},
-  {name:'Phrolova', element:'인멸', weapon:'증폭기'},
-  {name:'Chisa', element:'인멸', weapon:'대검'},
-  {name:'Yangyang: Xuanling', element:'인멸', weapon:'직검'},
+  {name:'산화', element:'응결', weapon:'직검', position:'서브딜러'},
+  {name:'설지', element:'응결', weapon:'증폭기', position:'힐러/서포터'},
+  {name:'능양', element:'응결', weapon:'권갑', position:'서브딜러'},
+  {name:'절지', element:'응결', weapon:'증폭기', position:'힐러/서포터'},
+  {name:'유호', element:'응결', weapon:'권갑', position:'힐러/서포터'},
+  {name:'카를로타', element:'응결', weapon:'권총', position:'메인딜러'},
+  {name:'루실라', element:'응결', weapon:'증폭기', position:'서브딜러'},
+  {name:'히유키', element:'응결', weapon:'직검', position:'서브딜러'},
+  {name:'수수', element:'응결', weapon:'증폭기', position:'힐러/서포터'},
+  {name:'치샤', element:'용융', weapon:'권총', position:'메인딜러'},
+  {name:'앙코', element:'용융', weapon:'증폭기', position:'메인딜러'},
+  {name:'모르테피', element:'용융', weapon:'권총', position:'서브딜러'},
+  {name:'장리', element:'용융', weapon:'직검', position:'메인딜러'},
+  {name:'브렌트', element:'용융', weapon:'직검', position:'서브딜러'},
+  {name:'루파', element:'용융', weapon:'대검', position:'메인딜러'},
+  {name:'갈브레나', element:'용융', weapon:'권총', position:'서브딜러'},
+  {name:'모니에', element:'용융', weapon:'대검', position:'메인딜러'},
+  {name:'에이메스', element:'용융', weapon:'직검', position:'서브딜러'},
+  {name:'데니아', element:'용융', weapon:'증폭기', position:'힐러/서포터'},
+  {name:'경연', element:'용융', weapon:'대검', position:'메인딜러'},
+  {name:'카카루', element:'전도', weapon:'대검', position:'메인딜러'},
+  {name:'음림', element:'전도', weapon:'증폭기', position:'서브딜러'},
+  {name:'연무', element:'전도', weapon:'권갑', position:'서브딜러'},
+  {name:'상리요', element:'전도', weapon:'권갑', position:'메인딜러'},
+  {name:'루미', element:'전도', weapon:'대검', position:'메인딜러'},
+  {name:'아우구스타', element:'전도', weapon:'대검', position:'서브딜러'},
+  {name:'복링', element:'전도', weapon:'증폭기', position:'서브딜러'},
+  {name:'레베카', element:'전도', weapon:'권총', position:'서브딜러'},
+  {name:'방랑자(전도)', element:'전도', weapon:'직검', position:'메인딜러'},
+  {name:'양양', element:'기류', weapon:'직검', position:'서브딜러'},
+  {name:'알토', element:'기류', weapon:'권총', position:'서브딜러'},
+  {name:'기염', element:'기류', weapon:'대검', position:'메인딜러'},
+  {name:'감심', element:'기류', weapon:'권갑', position:'힐러/서포터'},
+  {name:'샤콘', element:'기류', weapon:'권총', position:'서브딜러'},
+  {name:'방랑자(기류)', element:'기류', weapon:'직검', position:'메인딜러'},
+  {name:'카르티시아', element:'기류', weapon:'직검', position:'메인딜러'},
+  {name:'유노', element:'기류', weapon:'권갑', position:'힐러/서포터'},
+  {name:'구원', element:'기류', weapon:'직검', position:'서브딜러'},
+  {name:'시그리카', element:'기류', weapon:'권갑', position:'서브딜러'},
+  {name:'청초', element:'기류', weapon:'직검', position:'메인딜러'},
+  {name:'벨리나', element:'회절', weapon:'증폭기', position:'힐러/서포터'},
+  {name:'방랑자(회절)', element:'회절', weapon:'직검', position:'메인딜러'},
+  {name:'금희', element:'회절', weapon:'대검', position:'메인딜러'},
+  {name:'파수인', element:'회절', weapon:'증폭기', position:'힐러/서포터'},
+  {name:'페비', element:'회절', weapon:'증폭기', position:'서브딜러'},
+  {name:'젠니', element:'회절', weapon:'권갑', position:'메인딜러'},
+  {name:'린네', element:'회절', weapon:'권총', position:'서브딜러'},
+  {name:'루크·헤르센', element:'회절', weapon:'권갑', position:'서브딜러'},
+  {name:'루시', element:'회절', weapon:'권총', position:'힐러/서포터'},
+  {name:'도기', element:'인멸', weapon:'대검', position:'서브딜러'},
+  {name:'단근', element:'인멸', weapon:'직검', position:'서브딜러'},
+  {name:'카멜리아', element:'인멸', weapon:'직검', position:'메인딜러'},
+  {name:'방랑자(인멸)', element:'인멸', weapon:'직검', position:'메인딜러'},
+  {name:'로코코', element:'인멸', weapon:'권갑', position:'서브딜러'},
+  {name:'칸타렐라', element:'인멸', weapon:'증폭기', position:'메인딜러'},
+  {name:'플로로', element:'인멸', weapon:'증폭기', position:'메인딜러'},
+  {name:'치사', element:'인멸', weapon:'대검', position:'서브딜러'},
+  {name:'양양(현령)', element:'인멸', weapon:'직검', position:'서브딜러'},
 ].map((c,i)=>({id:'r'+(i+1), ...c}));
+
+const POSITIONS = ['메인딜러','서브딜러','힐러/서포터'];
 
 const ELEMENTS = ['응결','용융','전도','기류','회절','인멸'];
 const WEAPONS = ['대검','직검','권총','권갑','증폭기'];
@@ -206,11 +208,21 @@ let state = { trainees: defaultTrainees(), parties: defaultParties(), settings: 
 const STORAGE_KEYS = ['trainees','parties','settings'];
 const saveTimers = {};
 
+/* 저장된 데이터의 스키마가 나중에 바뀌어도(예: trainee에 position 필드 추가) 깨지지 않도록
+   로드 직후 한 번 보정. 가챠 플래너의 normalize() 패턴과 동일한 역할. */
+function normalize(key, value){
+  if(value == null) return value;
+  if(key === 'trainees'){
+    return value.map(t=> ({position:'unset', ...t}));
+  }
+  return value;
+}
+
 async function loadAll(){
   for(const key of STORAGE_KEYS){
     try{
       const res = await storageAdapter.get(key);
-      if(res && typeof res.value === 'string') state[key] = JSON.parse(res.value);
+      if(res && typeof res.value === 'string') state[key] = normalize(key, JSON.parse(res.value));
     }catch(e){ /* 기본값 유지 */ }
   }
 }
@@ -320,7 +332,7 @@ function renderRosterPanel(){
         <button class="tglbtn ${groupMode==='weapon'?'active':''}" id="grp-weapon">무기별</button>
       </div>
       ${groups || '<div class="empty-hint">검색 결과가 없습니다</div>'}
-      <div class="note">클릭하면 아래 육성 목록에 추가됩니다. (로스터는 58명 샘플 — 실제 최신 목록으로 교체 가능)</div>
+      <div class="note">클릭하면 아래 육성 목록에 추가됩니다. (로스터 58명 · 포지션 기본값은 편집 가능한 참고용입니다)</div>
     </div>
   `;
 }
@@ -385,6 +397,14 @@ function skillSelect(tr, sd){
   `;
 }
 
+function positionSelect(tr){
+  const cur = tr.position || 'unset';
+  const opts = ['unset', ...POSITIONS].map(p=>
+    `<option value="${p}" ${cur===p?'selected':''}>${p==='unset'?'미정':p}</option>`
+  ).join('');
+  return `<select class="tr-position">${opts}</select>`;
+}
+
 function renderTraineeCard(tr){
   const sub = traineeSubtotal(tr, state.settings);
   return `
@@ -393,6 +413,7 @@ function renderTraineeCard(tr){
         <div>
           <span class="trainee-name">${escapeHtml(tr.name)}</span>
           <span class="trainee-tags">${tr.element} · ${tr.weapon}</span>
+          ${positionSelect(tr)}
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
           <label class="toggle"><input type="checkbox" class="tr-active" ${tr.active?'checked':''}> 육성</label>
@@ -441,6 +462,68 @@ function renderTrainTab(){
 }
 
 /* =========================================================
+   포지션/속성 시너지 기반 팀 추천 (재화 계산과는 무관한 참고용 휴리스틱)
+========================================================= */
+function recommendParties(){
+  const pool = state.trainees;
+  const mains = pool.filter(t=>t.position==='메인딜러');
+  const subs = pool.filter(t=>t.position==='서브딜러');
+  const heals = pool.filter(t=>t.position==='힐러/서포터');
+  const missing = [];
+  if(!mains.length) missing.push('메인딜러');
+  if(!subs.length) missing.push('서브딜러');
+  if(!heals.length) missing.push('힐러/서포터');
+  if(missing.length) return {combos:[], missing};
+
+  const combos = [];
+  mains.forEach(m=>{
+    subs.forEach(s=>{
+      if(s.id===m.id) return;
+      heals.forEach(h=>{
+        if(h.id===m.id || h.id===s.id) return;
+        const members = [m,s,h];
+        const counts = {};
+        members.forEach(x=> counts[x.element] = (counts[x.element]||0)+1);
+        const synergy = Math.max(...Object.values(counts)) >= 2;
+        combos.push({members, synergy});
+      });
+    });
+  });
+  combos.sort((a,b)=> (b.synergy?1:0) - (a.synergy?1:0));
+  return {combos: combos.slice(0,5), missing:[]};
+}
+
+function renderRecommendPanel(){
+  const {combos, missing} = recommendParties();
+  if(missing.length){
+    return `
+      <div class="card">
+        <h2>추천 조합</h2>
+        <div class="empty-hint">${missing.join(', ')} 포지션의 캐릭터가 육성 목록에 없어 추천할 수 없습니다. "캐릭터 육성" 탭에서 포지션을 지정해주세요.</div>
+      </div>
+    `;
+  }
+  const cardsHtml = combos.map((c,i)=>`
+    <div class="party-card">
+      <div class="party-head">
+        <div style="font-weight:700;">추천 조합 ${i+1}${c.synergy ? ' <span class="note" style="display:inline;color:var(--gold);">· 속성 시너지</span>' : ''}</div>
+        <button class="btn btn-small btn-gold combo-use" data-combo="${i}">이 조합으로 파티 만들기</button>
+      </div>
+      <div class="party-slots">
+        ${c.members.map(m=>`<div class="slot"><div class="name">${escapeHtml(m.name)}</div><div class="note" style="margin:0;">${m.position} · ${m.element}</div></div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+  return `
+    <div class="card">
+      <h2>추천 조합</h2>
+      <div class="note" style="margin-bottom:10px;">메인딜러·서브딜러·힐러/서포터를 1명씩 묶어 추천합니다. "속성 시너지"는 같은 속성이 2명 이상 겹칠 때 표시되는 단순 참고용 표시이며, 실제 공명 효과를 계산하지는 않습니다.</div>
+      ${cardsHtml}
+    </div>
+  `;
+}
+
+/* =========================================================
    육성 파티 탭 (재화 소계 없음, 3인 고정 그룹핑 전용)
 ========================================================= */
 function renderPartySlot(party, slotIndex){
@@ -471,6 +554,7 @@ function renderPartyCard(party){
 }
 function renderPartyTab(){
   return `
+    ${renderRecommendPanel()}
     <div class="note" style="margin-bottom:10px;">
       파티는 재화 계산과 무관하게, 육성 목록에 추가된 캐릭터를 3인 조합으로 정리해두는 용도입니다. 한 캐릭터가 여러 파티에 동시에 들어갈 수 있습니다.
     </div>
@@ -501,7 +585,7 @@ function bindEvents(){
         if(state.trainees.some(t=>t.rosterId===rid)){ showToast('이미 추가된 캐릭터입니다'); return; }
         const c = ROSTER.find(x=>x.id===rid);
         state.trainees.push({
-          id: uid('tr'), rosterId: c.id, name: c.name, element: c.element, weapon: c.weapon,
+          id: uid('tr'), rosterId: c.id, name: c.name, element: c.element, weapon: c.weapon, position: c.position,
           active: true, fillAll: false,
           skills: {basic:'none', skill:'none', circuit:'none', liberation:'none', intro:'none'},
         });
@@ -538,6 +622,7 @@ function bindEvents(){
       if(!tr) return;
       card.querySelector('.tr-active').addEventListener('change', e=>{ tr.active=e.target.checked; scheduleSave('trainees'); renderAll(); });
       card.querySelector('.tr-fillall').addEventListener('change', e=>{ tr.fillAll=e.target.checked; scheduleSave('trainees'); renderAll(); });
+      card.querySelector('.tr-position').addEventListener('change', e=>{ tr.position=e.target.value; scheduleSave('trainees'); renderAll(); });
       card.querySelectorAll('.skill-select').forEach(sel=>{
         sel.addEventListener('change', e=>{
           tr.skills[sel.dataset.key] = e.target.value;
@@ -577,7 +662,7 @@ function bindEvents(){
       reader.onload = ()=>{
         try{
           const parsed = JSON.parse(reader.result);
-          if(parsed.trainees) state.trainees = parsed.trainees;
+          if(parsed.trainees) state.trainees = normalize('trainees', parsed.trainees);
           if(parsed.parties) state.parties = parsed.parties;
           if(parsed.settings) state.settings = parsed.settings;
           STORAGE_KEYS.forEach(scheduleSave);
@@ -590,6 +675,18 @@ function bindEvents(){
   }
 
   if(activeTab === 'party'){
+    const {combos} = recommendParties();
+    main.querySelectorAll('.combo-use').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const combo = combos[Number(btn.dataset.combo)];
+        if(!combo) return;
+        state.parties.push({id:uid('party'), name:'추천 조합', slots:combo.members.map(m=>m.id)});
+        scheduleSave('parties');
+        showToast('파티가 생성되었습니다');
+        renderAll();
+      });
+    });
+
     const addBtn = main.querySelector('#party-add');
     if(addBtn) addBtn.addEventListener('click', ()=>{
       state.parties.push({id:uid('party'), name:'새 파티', slots:[null,null,null]});

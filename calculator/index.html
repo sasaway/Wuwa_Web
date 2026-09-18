@@ -3,100 +3,110 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>명조 스킬 재화 계산기</title>
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07141B">
+<title>스킬 재화 계산기 | Fair Winds</title>
+<meta name="description" content="캐릭터 스킬 레벨업에 필요한 재화를 합산하고 포지션과 속성으로 파티를 추천하는 명조 비공식 도구입니다.">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="../assets/fairwinds.css">
 <style>
-  :root{
-    --bg:#0f1420; --panel:#161d2e; --panel2:#1c2438; --border:#2a3350;
-    --text:#e8e6df; --muted:#8b93a7; --gold:#d4af6a; --gold-dim:#a68a52;
-    --danger:#d9534f; --danger-dim:#8a3a37;
-    --t-green:#4fae7a; --t-blue:#4a90d9; --t-purple:#9b6fd1; --t-gold:#d4af6a;
-    --e-glacio:#7ec8e3; --e-fusion:#e0703e; --e-electro:#a56fe0;
-    --e-aero:#5cbf8e; --e-spectro:#d9c15a; --e-havoc:#d968a0;
+  .group-block{margin-bottom:16px;}
+  .group-title{font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:8px;}
+  .pill-wrap{display:flex;flex-wrap:wrap;gap:8px;}
+  button.pill{
+    position:relative;
+    min-height:38px;
+    padding:0 14px 0 16px;
+    border:0;
+    border-radius:999px;
+    background:rgba(255,255,255,0.04);
+    color:var(--text);
+    font:500 13.5px/1 var(--font-body);
+    cursor:pointer;
+    box-shadow:inset 0 0 0 1px var(--line), inset 3px 0 0 var(--pc, var(--primary));
+    transition:transform .35s var(--ease), background .35s var(--ease), box-shadow .35s var(--ease), opacity .35s var(--ease);
   }
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Malgun Gothic",sans-serif;font-size:14px;line-height:1.5;padding-bottom:20px;}
-  header{max-width:960px;margin:0 auto;padding:16px 16px 0;}
-  h1{font-size:18px;color:var(--gold);margin:0 0 12px;font-weight:700;}
-  main{max-width:960px;margin:0 auto;padding:0 16px 16px;}
-  nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:14px;}
-  nav.tabs button{background:none;border:none;color:var(--muted);padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;}
-  nav.tabs button.active{color:var(--gold);border-bottom-color:var(--gold);font-weight:600;}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;}
-  .card h2{font-size:14px;margin:0 0 10px;color:var(--text);}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
-  input[type=text]{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:13px;}
-  select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 7px;font-size:12.5px;}
-  button.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12.5px;}
-  button.btn:hover{border-color:var(--gold-dim);}
-  button.btn-gold{background:var(--gold);color:#1a1608;border:none;font-weight:700;}
-  button.btn-danger{background:var(--danger-dim);border:1px solid var(--danger);color:#fff;}
-  button.btn-small{padding:3px 8px;font-size:11px;}
-  button.tglbtn{background:var(--panel2);border:1px solid var(--border);color:var(--muted);padding:6px 10px;border-radius:6px;font-size:12px;cursor:pointer;}
-  button.tglbtn.active{color:var(--gold);border-color:var(--gold-dim);}
+  button.pill:hover{background:rgba(122,220,196,0.08);box-shadow:inset 0 0 0 1px var(--primary), inset 3px 0 0 var(--pc, var(--primary));}
+  button.pill:active{transform:scale(0.97);}
+  button.pill.added{color:var(--faint);background:transparent;cursor:default;}
 
-  .group-block{margin-bottom:14px;}
-  .group-title{font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px;}
-  .pill-wrap{display:flex;flex-wrap:wrap;gap:6px;}
-  .pill{
-    border:1px solid var(--border);border-left:4px solid var(--pc,var(--gold));
-    background:var(--panel2);color:var(--text);border-radius:5px;
-    padding:5px 10px;font-size:12px;cursor:pointer;
+  .totals-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+  @media (max-width:560px){.totals-grid{grid-template-columns:repeat(2,1fr);}}
+  .tstat{
+    padding:16px 12px;
+    border-radius:18px;
+    text-align:center;
+    background:rgba(255,255,255,0.03);
+    box-shadow:inset 0 0 0 1px var(--line);
   }
-  .pill:hover{border-color:var(--gold-dim);}
-  .pill.added{opacity:0.4;cursor:default;}
-
-  .totals-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
-  .tstat{background:var(--panel2);border-radius:6px;padding:10px;text-align:center;}
-  .tstat .n{font-size:19px;font-weight:700;}
-  .tstat .l{font-size:11px;color:var(--muted);margin-top:2px;}
+  .tstat .n{font-family:var(--font-display);font-size:26px;font-weight:600;letter-spacing:-0.02em;}
+  .tstat .l{font-size:12px;color:var(--muted);margin-top:2px;}
   .tstat.green .n{color:var(--t-green);}
   .tstat.blue .n{color:var(--t-blue);}
-  .tstat.purple .n{color:var(--t-purple);}
+  .tstat.purple .n{color:#B99BE6;}
   .tstat.gold .n{color:var(--t-gold);}
 
-  .trainee-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--panel2);}
-  .trainee-card.inactive{opacity:0.45;}
-  .trainee-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
-  .trainee-name{font-weight:700;font-size:14px;}
-  .trainee-tags{font-size:11px;color:var(--muted);margin-left:6px;}
-  .skill-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px;}
-  @media (max-width:640px){.skill-grid{grid-template-columns:repeat(2,1fr);}}
-  .skill-cell{background:var(--panel);border-radius:5px;padding:6px;text-align:center;}
-  .skill-cell label{display:block;font-size:10.5px;color:var(--muted);margin-bottom:3px;}
-  .sub-line{font-size:11.5px;color:var(--muted);text-align:right;}
-  .sub-line b{color:var(--gold);}
-  .foot-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
-  label.toggle{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:4px;}
+  .trainee-card{
+    border-radius:20px;
+    padding:16px;
+    margin-bottom:12px;
+    background:rgba(255,255,255,0.025);
+    box-shadow:inset 0 0 0 1px var(--line);
+    transition:opacity .35s var(--ease);
+  }
+  .trainee-card.inactive{opacity:0.8;}
+  .trainee-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
+  .trainee-name{font-family:var(--font-display);font-weight:600;font-size:17px;margin-right:6px;}
+  .trainee-tags{font-size:12.5px;color:var(--muted);margin-right:8px;}
+  .skill-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;}
+  @media (max-width:720px){.skill-grid{grid-template-columns:repeat(2,1fr);}}
+  .skill-cell{border-radius:14px;padding:8px;text-align:center;background:rgba(7,20,27,0.5);}
+  .skill-cell label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .skill-cell select{width:100%;}
+  .sub-line{font-size:12.5px;color:var(--muted);text-align:right;}
+  .sub-line b{color:var(--text);font-weight:600;}
+  .foot-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:12px;}
+  label.toggle{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:8px;}
 
   .settings-body{display:none;}
   .settings-body.open{display:block;}
-  table{width:100%;border-collapse:collapse;font-size:12.5px;}
-  th,td{padding:6px;text-align:center;border-bottom:1px solid var(--border);}
-  th{color:var(--muted);}
-  td input[type=text]{width:60px;text-align:center;}
+  .settings-body td input[type=text]{width:72px;text-align:center;}
 
-  .party-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:var(--panel2);}
-  .party-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
-  .party-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-  .slot{background:var(--panel);border:1px dashed var(--border);border-radius:6px;padding:10px;text-align:center;}
-  .slot .name{font-weight:600;font-size:13px;margin-bottom:4px;}
-  .slot .empty{color:var(--muted);font-size:12px;}
-  .slot select{width:100%;margin-top:4px;}
-
-  .empty-hint{color:var(--muted);font-size:12px;padding:10px 0;}
-  .note{font-size:11.5px;color:var(--muted);margin-top:6px;}
-  .toast{position:fixed;bottom:16px;right:16px;background:var(--panel2);border:1px solid var(--gold-dim);color:var(--text);padding:8px 14px;border-radius:6px;font-size:12.5px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99;}
-  .toast.show{opacity:1;}
+  .party-card{border-radius:20px;padding:16px;margin-bottom:14px;background:rgba(255,255,255,0.025);box-shadow:inset 0 0 0 1px var(--line);}
+  .party-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px;}
+  .party-head input.party-name{font-weight:700;min-width:0;flex:1 1 auto;max-width:280px;}
+  .party-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media (max-width:560px){.party-slots{grid-template-columns:1fr;}}
+  .slot{border-radius:16px;padding:12px;text-align:center;background:rgba(7,20,27,0.5);box-shadow:inset 0 0 0 1px var(--line);}
+  .slot .name{font-family:var(--font-display);font-weight:600;font-size:15px;margin-bottom:2px;}
+  .slot .empty{color:var(--muted);font-size:13px;}
+  .slot select{width:100%;margin-top:8px;}
+  .synergy{display:inline-block;margin-left:8px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;color:var(--primary);background:rgba(122,220,196,0.10);box-shadow:inset 0 0 0 1px rgba(122,220,196,0.3);}
 </style>
 </head>
 <body>
-<header>
-  <h1>명조 스킬 재화 계산기 — 프로토타입 v1</h1>
-  <nav class="tabs" id="tabNav"></nav>
-</header>
-<main id="mainArea"></main>
-<div class="toast" id="toast"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-wind" viewBox="0 0 256 256" fill="currentColor"><path d="M182,184a30,30,0,0,1-30,30c-12.9,0-25.36-8.38-29.63-19.92a6,6,0,0,1,11.26-4.16C136.13,196.69,144.2,202,152,202a18,18,0,0,0,0-36H40a6,6,0,0,1,0-12H152A30,30,0,0,1,182,184ZM150,72a30,30,0,0,0-30-30c-12.9,0-25.36,8.38-29.63,19.92a6,6,0,1,0,11.26,4.16C104.13,59.31,112.2,54,120,54a18,18,0,0,1,0,36H24a6,6,0,0,0,0,12h96A30,30,0,0,0,150,72Zm58,2c-12.9,0-25.36,8.38-29.63,19.92a6,6,0,1,0,11.26,4.16C192.13,91.31,200.2,86,208,86a18,18,0,0,1,0,36H32a6,6,0,0,0,0,12H208a30,30,0,0,0,0-60Z"/></symbol></svg>
 
+<header class="app-header">
+  <div class="brand-row">
+    <a class="brand" href="../index.html" aria-label="Fair Winds 홈으로">
+      <span class="brand-mark"><svg aria-hidden="true"><use href="#i-wind"/></svg></span>
+      <span class="brand-name">Fair Winds<span class="brand-sub">명조 비공식 플래너</span></span>
+    </a>
+  </div>
+  <h1 class="page-title">스킬 재화 계산기</h1>
+  <p class="page-lede">스킬 레벨업에 필요한 재화를 합산하고, 포지션과 속성으로 파티를 추천합니다.</p>
+</header>
+<nav class="tabs" id="tabNav" aria-label="스킬 재화 계산기 메뉴"></nav>
+<main id="mainArea"></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="../assets/fw.js"></script>
 <script>
 /* =========================================================
    저장 어댑터 (window.storage 없으면 localStorage로 자동 폴백)
@@ -121,65 +131,68 @@ const storageAdapter = hasArtifactStorage ? {
    name은 encore.moe(ko/en 로케일 대조)로 확인한 한국어 공식 표기로 교체함(2026-09-18).
    position은 커뮤니티에 널리 알려진 통상적 포지션 기본값 — 계산기 UI에서 캐릭터별로 수정 가능) */
 const ROSTER = [
-  {name:'산화', element:'응결', weapon:'직검', position:'서브딜러'},
-  {name:'설지', element:'응결', weapon:'증폭기', position:'힐러/서포터'},
-  {name:'능양', element:'응결', weapon:'권갑', position:'서브딜러'},
-  {name:'절지', element:'응결', weapon:'증폭기', position:'힐러/서포터'},
-  {name:'유호', element:'응결', weapon:'권갑', position:'힐러/서포터'},
-  {name:'카를로타', element:'응결', weapon:'권총', position:'메인딜러'},
-  {name:'루실라', element:'응결', weapon:'증폭기', position:'서브딜러'},
-  {name:'히유키', element:'응결', weapon:'직검', position:'서브딜러'},
-  {name:'수수', element:'응결', weapon:'증폭기', position:'힐러/서포터'},
-  {name:'치샤', element:'용융', weapon:'권총', position:'메인딜러'},
-  {name:'앙코', element:'용융', weapon:'증폭기', position:'메인딜러'},
-  {name:'모르테피', element:'용융', weapon:'권총', position:'서브딜러'},
-  {name:'장리', element:'용융', weapon:'직검', position:'메인딜러'},
-  {name:'브렌트', element:'용융', weapon:'직검', position:'서브딜러'},
-  {name:'루파', element:'용융', weapon:'대검', position:'메인딜러'},
-  {name:'갈브레나', element:'용융', weapon:'권총', position:'서브딜러'},
-  {name:'모니에', element:'용융', weapon:'대검', position:'메인딜러'},
-  {name:'에이메스', element:'용융', weapon:'직검', position:'서브딜러'},
-  {name:'데니아', element:'용융', weapon:'증폭기', position:'힐러/서포터'},
-  {name:'경연', element:'용융', weapon:'대검', position:'메인딜러'},
-  {name:'카카루', element:'전도', weapon:'대검', position:'메인딜러'},
-  {name:'음림', element:'전도', weapon:'증폭기', position:'서브딜러'},
-  {name:'연무', element:'전도', weapon:'권갑', position:'서브딜러'},
-  {name:'상리요', element:'전도', weapon:'권갑', position:'메인딜러'},
-  {name:'루미', element:'전도', weapon:'대검', position:'메인딜러'},
-  {name:'아우구스타', element:'전도', weapon:'대검', position:'서브딜러'},
-  {name:'복링', element:'전도', weapon:'증폭기', position:'서브딜러'},
-  {name:'레베카', element:'전도', weapon:'권총', position:'서브딜러'},
-  {name:'방랑자(전도)', element:'전도', weapon:'직검', position:'메인딜러'},
-  {name:'양양', element:'기류', weapon:'직검', position:'서브딜러'},
-  {name:'알토', element:'기류', weapon:'권총', position:'서브딜러'},
-  {name:'기염', element:'기류', weapon:'대검', position:'메인딜러'},
-  {name:'감심', element:'기류', weapon:'권갑', position:'힐러/서포터'},
-  {name:'샤콘', element:'기류', weapon:'권총', position:'서브딜러'},
-  {name:'방랑자(기류)', element:'기류', weapon:'직검', position:'메인딜러'},
-  {name:'카르티시아', element:'기류', weapon:'직검', position:'메인딜러'},
-  {name:'유노', element:'기류', weapon:'권갑', position:'힐러/서포터'},
-  {name:'구원', element:'기류', weapon:'직검', position:'서브딜러'},
-  {name:'시그리카', element:'기류', weapon:'권갑', position:'서브딜러'},
-  {name:'청초', element:'기류', weapon:'직검', position:'메인딜러'},
-  {name:'벨리나', element:'회절', weapon:'증폭기', position:'힐러/서포터'},
-  {name:'방랑자(회절)', element:'회절', weapon:'직검', position:'메인딜러'},
-  {name:'금희', element:'회절', weapon:'대검', position:'메인딜러'},
-  {name:'파수인', element:'회절', weapon:'증폭기', position:'힐러/서포터'},
-  {name:'페비', element:'회절', weapon:'증폭기', position:'서브딜러'},
-  {name:'젠니', element:'회절', weapon:'권갑', position:'메인딜러'},
-  {name:'린네', element:'회절', weapon:'권총', position:'서브딜러'},
-  {name:'루크·헤르센', element:'회절', weapon:'권갑', position:'서브딜러'},
-  {name:'루시', element:'회절', weapon:'권총', position:'힐러/서포터'},
-  {name:'도기', element:'인멸', weapon:'대검', position:'서브딜러'},
-  {name:'단근', element:'인멸', weapon:'직검', position:'서브딜러'},
-  {name:'카멜리아', element:'인멸', weapon:'직검', position:'메인딜러'},
-  {name:'방랑자(인멸)', element:'인멸', weapon:'직검', position:'메인딜러'},
-  {name:'로코코', element:'인멸', weapon:'권갑', position:'서브딜러'},
-  {name:'칸타렐라', element:'인멸', weapon:'증폭기', position:'메인딜러'},
-  {name:'플로로', element:'인멸', weapon:'증폭기', position:'메인딜러'},
-  {name:'치사', element:'인멸', weapon:'대검', position:'서브딜러'},
-  {name:'양양(현령)', element:'인멸', weapon:'직검', position:'서브딜러'},
-].map((c,i)=>({id:'r'+(i+1), ...c}));
+  {id:'sanhua', name:'산화', element:'응결', weapon:'직검', position:'서브딜러'},
+  {id:'baizhi', name:'설지', element:'응결', weapon:'증폭기', position:'힐러/서포터'},
+  {id:'lingyang', name:'능양', element:'응결', weapon:'권갑', position:'서브딜러'},
+  {id:'zhezhi', name:'절지', element:'응결', weapon:'증폭기', position:'힐러/서포터'},
+  {id:'youhu', name:'유호', element:'응결', weapon:'권갑', position:'힐러/서포터'},
+  {id:'carlotta', name:'카를로타', element:'응결', weapon:'권총', position:'메인딜러'},
+  {id:'lucilla', name:'루실라', element:'응결', weapon:'증폭기', position:'서브딜러'},
+  {id:'hiyuki', name:'히유키', element:'응결', weapon:'직검', position:'서브딜러'},
+  {id:'suisui', name:'수수', element:'응결', weapon:'증폭기', position:'힐러/서포터'},
+  {id:'chixia', name:'치샤', element:'용융', weapon:'권총', position:'메인딜러'},
+  {id:'encore', name:'앙코', element:'용융', weapon:'증폭기', position:'메인딜러'},
+  {id:'mortefi', name:'모르테피', element:'용융', weapon:'권총', position:'서브딜러'},
+  {id:'changli', name:'장리', element:'용융', weapon:'직검', position:'메인딜러'},
+  {id:'brant', name:'브렌트', element:'용융', weapon:'직검', position:'서브딜러'},
+  {id:'lupa', name:'루파', element:'용융', weapon:'대검', position:'메인딜러'},
+  {id:'galbrena', name:'갈브레나', element:'용융', weapon:'권총', position:'서브딜러'},
+  {id:'mornye', name:'모니에', element:'용융', weapon:'대검', position:'메인딜러'},
+  {id:'aemeath', name:'에이메스', element:'용융', weapon:'직검', position:'서브딜러'},
+  {id:'denia', name:'데니아', element:'용융', weapon:'증폭기', position:'힐러/서포터'},
+  {id:'jingran', name:'경연', element:'용융', weapon:'대검', position:'메인딜러'},
+  {id:'calcharo', name:'카카루', element:'전도', weapon:'대검', position:'메인딜러'},
+  {id:'yinlin', name:'음림', element:'전도', weapon:'증폭기', position:'서브딜러'},
+  {id:'yuanwu', name:'연무', element:'전도', weapon:'권갑', position:'서브딜러'},
+  {id:'xiangli-yao', name:'상리요', element:'전도', weapon:'권갑', position:'메인딜러'},
+  {id:'lumi', name:'루미', element:'전도', weapon:'대검', position:'메인딜러'},
+  {id:'augusta', name:'아우구스타', element:'전도', weapon:'대검', position:'서브딜러'},
+  {id:'buling', name:'복링', element:'전도', weapon:'증폭기', position:'서브딜러'},
+  {id:'rebecca', name:'레베카', element:'전도', weapon:'권총', position:'서브딜러'},
+  {id:'rover-electro', name:'방랑자(전도)', element:'전도', weapon:'직검', position:'메인딜러'},
+  {id:'yangyang', name:'양양', element:'기류', weapon:'직검', position:'서브딜러'},
+  {id:'aalto', name:'알토', element:'기류', weapon:'권총', position:'서브딜러'},
+  {id:'jiyan', name:'기염', element:'기류', weapon:'대검', position:'메인딜러'},
+  {id:'jianxin', name:'감심', element:'기류', weapon:'권갑', position:'힐러/서포터'},
+  {id:'ciaccona', name:'샤콘', element:'기류', weapon:'권총', position:'서브딜러'},
+  {id:'rover-aero', name:'방랑자(기류)', element:'기류', weapon:'직검', position:'메인딜러'},
+  {id:'cartethyia', name:'카르티시아', element:'기류', weapon:'직검', position:'메인딜러'},
+  {id:'iuno', name:'유노', element:'기류', weapon:'권갑', position:'힐러/서포터'},
+  {id:'qiuyuan', name:'구원', element:'기류', weapon:'직검', position:'서브딜러'},
+  {id:'sigrika', name:'시그리카', element:'기류', weapon:'권갑', position:'서브딜러'},
+  {id:'qingxiao', name:'청초', element:'기류', weapon:'직검', position:'메인딜러'},
+  {id:'verina', name:'벨리나', element:'회절', weapon:'증폭기', position:'힐러/서포터'},
+  {id:'rover-spectro', name:'방랑자(회절)', element:'회절', weapon:'직검', position:'메인딜러'},
+  {id:'jinhsi', name:'금희', element:'회절', weapon:'대검', position:'메인딜러'},
+  {id:'shorekeeper', name:'파수인', element:'회절', weapon:'증폭기', position:'힐러/서포터'},
+  {id:'phoebe', name:'페비', element:'회절', weapon:'증폭기', position:'서브딜러'},
+  {id:'zani', name:'젠니', element:'회절', weapon:'권갑', position:'메인딜러'},
+  {id:'lynae', name:'린네', element:'회절', weapon:'권총', position:'서브딜러'},
+  {id:'luuk-herssen', name:'루크·헤르센', element:'회절', weapon:'권갑', position:'서브딜러'},
+  {id:'lucy', name:'루시', element:'회절', weapon:'권총', position:'힐러/서포터'},
+  {id:'taoqi', name:'도기', element:'인멸', weapon:'대검', position:'서브딜러'},
+  {id:'danjin', name:'단근', element:'인멸', weapon:'직검', position:'서브딜러'},
+  {id:'camellya', name:'카멜리아', element:'인멸', weapon:'직검', position:'메인딜러'},
+  {id:'rover-havoc', name:'방랑자(인멸)', element:'인멸', weapon:'직검', position:'메인딜러'},
+  {id:'roccia', name:'로코코', element:'인멸', weapon:'권갑', position:'서브딜러'},
+  {id:'cantarella', name:'칸타렐라', element:'인멸', weapon:'증폭기', position:'메인딜러'},
+  {id:'phrolova', name:'플로로', element:'인멸', weapon:'증폭기', position:'메인딜러'},
+  {id:'chisa', name:'치사', element:'인멸', weapon:'대검', position:'서브딜러'},
+  {id:'yangyang-xuanling', name:'양양(현령)', element:'인멸', weapon:'직검', position:'서브딜러'},
+].map(c=>({...c}));
+
+/* 예전 저장 데이터가 쓰던 순번 id(r1~r58) → 고정 id 변환표. 로스터 앞쪽 순서가 바뀌어도 이 표는 그대로 둔다. */
+const LEGACY_ROSTER_IDS = {r1:'sanhua',r2:'baizhi',r3:'lingyang',r4:'zhezhi',r5:'youhu',r6:'carlotta',r7:'lucilla',r8:'hiyuki',r9:'suisui',r10:'chixia',r11:'encore',r12:'mortefi',r13:'changli',r14:'brant',r15:'lupa',r16:'galbrena',r17:'mornye',r18:'aemeath',r19:'denia',r20:'jingran',r21:'calcharo',r22:'yinlin',r23:'yuanwu',r24:'xiangli-yao',r25:'lumi',r26:'augusta',r27:'buling',r28:'rebecca',r29:'rover-electro',r30:'yangyang',r31:'aalto',r32:'jiyan',r33:'jianxin',r34:'ciaccona',r35:'rover-aero',r36:'cartethyia',r37:'iuno',r38:'qiuyuan',r39:'sigrika',r40:'qingxiao',r41:'verina',r42:'rover-spectro',r43:'jinhsi',r44:'shorekeeper',r45:'phoebe',r46:'zani',r47:'lynae',r48:'luuk-herssen',r49:'lucy',r50:'taoqi',r51:'danjin',r52:'camellya',r53:'rover-havoc',r54:'roccia',r55:'cantarella',r56:'phrolova',r57:'chisa',r58:'yangyang-xuanling'};
 
 const POSITIONS = ['메인딜러','서브딜러','힐러/서포터'];
 
@@ -210,11 +223,61 @@ const saveTimers = {};
 
 /* 저장된 데이터의 스키마가 나중에 바뀌어도(예: trainee에 position 필드 추가) 깨지지 않도록
    로드 직후 한 번 보정. 가챠 플래너의 normalize() 패턴과 동일한 역할. */
+/* 저장된 값과 가져온 JSON 은 HTML 에 끼워 넣기 전에 여기서 한 번 걸러낸다:
+   id 는 [A-Za-z0-9_-] 만, 속성/무기/포지션/스킬 값은 허용 목록 안에서만, 설정은 0 이상의 정수만 통과. */
+function safeId(v){
+  return String(v == null ? '' : v).replace(/[^\w-]/g,'_') || uid('x');
+}
+function hasOwn(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
+
 function normalize(key, value){
   if(value == null) return value;
+
   if(key === 'trainees'){
-    return value.map(t=> ({position:'unset', ...t}));
+    if(!Array.isArray(value)) return [];
+    return value.filter(t=> t && typeof t === 'object').map(t=>{
+      const rosterId = safeId(hasOwn(LEGACY_ROSTER_IDS, t.rosterId) ? LEGACY_ROSTER_IDS[t.rosterId] : t.rosterId);
+      const r = ROSTER.find(x=>x.id===rosterId);
+      const sk = (t.skills && typeof t.skills === 'object') ? t.skills : {};
+      const savedPos = POSITIONS.includes(t.position) ? t.position : null;
+      return {
+        id: safeId(t.id),
+        rosterId,
+        name: r ? r.name : String(t.name == null ? '' : t.name),
+        element: r ? r.element : (ELEMENTS.includes(t.element) ? t.element : ELEMENTS[0]),
+        weapon: r ? r.weapon : (WEAPONS.includes(t.weapon) ? t.weapon : WEAPONS[0]),
+        position: savedPos || (r ? r.position : 'unset'),
+        active: t.active !== false,
+        fillAll: !!t.fillAll,
+        skills: Object.fromEntries(SKILL_DEFS.map(sd=>[sd.key, (sk[sd.key]==='6' || sk[sd.key]==='10') ? sk[sd.key] : 'none'])),
+      };
+    });
   }
+
+  if(key === 'parties'){
+    if(!Array.isArray(value)) return [];
+    return value.filter(p=> p && typeof p === 'object').map(p=>{
+      const slots = Array.isArray(p.slots) ? p.slots : [];
+      return {
+        id: safeId(p.id),
+        name: String(p.name == null ? '' : p.name),
+        slots: [0,1,2].map(i=> (typeof slots[i] === 'string' && slots[i]) ? safeId(slots[i]) : null),
+      };
+    });
+  }
+
+  if(key === 'settings'){
+    const d = defaultSettings();
+    const s = (value && typeof value === 'object') ? value : {};
+    const out = {};
+    Object.keys(d).forEach(k=>{
+      if(typeof d[k] === 'boolean'){ out[k] = s[k] === undefined ? d[k] : !!s[k]; return; }
+      const n = Number(s[k]);
+      out[k] = (s[k] !== null && s[k] !== '' && Number.isFinite(n)) ? Math.max(0, Math.trunc(n)) : d[k];
+    });
+    return out;
+  }
+
   return value;
 }
 
@@ -292,14 +355,28 @@ let settingsOpen = false;
 
 function renderNav(){
   const nav = document.getElementById('tabNav');
-  nav.innerHTML = TABS.map(t=>`<button data-tab="${t.id}" class="${t.id===activeTab?'active':''}">${t.label}</button>`).join('');
-  nav.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ activeTab=b.dataset.tab; renderAll(); }));
+  if(!nav.children.length){
+    nav.innerHTML = TABS.map(t=>`<button type="button" data-tab="${t.id}">${t.label}</button>`).join('');
+    nav.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ activeTab = btn.dataset.tab; renderAll(); playViewEnter(); });
+    });
+  }
+  nav.querySelectorAll('button').forEach(btn=>{
+    const on = btn.dataset.tab === activeTab;
+    btn.classList.toggle('active', on);
+    if(on) btn.setAttribute('aria-current','page'); else btn.removeAttribute('aria-current');
+  });
 }
+
+/* 포커스 복원, 표 래퍼, 탭 전환 모션은 ../assets/fw.js 에 있음 */
 function renderAll(){
   renderNav();
   const m = document.getElementById('mainArea');
+  const f = captureFocus(m);
   m.innerHTML = activeTab==='train' ? renderTrainTab() : renderPartyTab();
+  wrapTables(m);
   bindEvents();
+  restoreFocus(m, f);
 }
 
 /* =========================================================
@@ -307,7 +384,7 @@ function renderAll(){
 ========================================================= */
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function renderRosterPanel(){
+function renderRosterGroups(){
   const q = searchQuery.trim().toLowerCase();
   const addedIds = new Set(state.trainees.map(t=>t.rosterId));
   const filtered = ROSTER.filter(c=> !q || c.name.toLowerCase().includes(q));
@@ -318,11 +395,14 @@ function renderRosterPanel(){
     if(!items.length) return '';
     const pills = items.map(c=>{
       const added = addedIds.has(c.id);
-      return `<span class="pill ${added?'added':''}" data-rid="${c.id}" style="--pc:${ELEMENT_COLOR[c.element]}">${escapeHtml(c.name)}${added?' ✓':''}</span>`;
+      return `<button type="button" class="pill ${added?'added':''}" data-rid="${c.id}" aria-pressed="${added}" style="--pc:${ELEMENT_COLOR[c.element]}">${escapeHtml(c.name)}${added?' ✓':''}</button>`;
     }).join('');
     return `<div class="group-block"><div class="group-title">${key} (${items.length})</div><div class="pill-wrap">${pills}</div></div>`;
   }).join('');
+  return groups || '<div class="empty-hint">검색 결과가 없습니다</div>';
+}
 
+function renderRosterPanel(){
   return `
     <div class="card">
       <h2>캐릭터 추가</h2>
@@ -331,7 +411,7 @@ function renderRosterPanel(){
         <button class="tglbtn ${groupMode==='element'?'active':''}" id="grp-element">속성별</button>
         <button class="tglbtn ${groupMode==='weapon'?'active':''}" id="grp-weapon">무기별</button>
       </div>
-      ${groups || '<div class="empty-hint">검색 결과가 없습니다</div>'}
+      <div id="rosterGroups">${renderRosterGroups()}</div>
       <div class="note">클릭하면 아래 육성 목록에 추가됩니다. (로스터 58명 · 포지션 기본값은 편집 가능한 참고용입니다)</div>
     </div>
   `;
@@ -352,23 +432,23 @@ function renderSettingsPanel(){
             <td style="text-align:left;">스킬 기본 (레벨 무관)</td>
             <td><input type="text" id="s-green" value="${numDisplay(s.green)}" placeholder="0"></td>
             <td><input type="text" id="s-blue" value="${numDisplay(s.blue)}" placeholder="0"></td>
-            <td>—</td><td>—</td>
+            <td>-</td><td>-</td>
           </tr>
           <tr>
             <td style="text-align:left;">6레벨까지 추가</td>
-            <td>—</td><td>—</td>
+            <td>-</td><td>-</td>
             <td><input type="text" id="s-to6purple" value="${numDisplay(s.to6purple)}" placeholder="0"></td>
-            <td>—</td>
+            <td>-</td>
           </tr>
           <tr>
             <td style="text-align:left;">10레벨까지 추가(6→10 구간)</td>
-            <td>—</td><td>—</td>
+            <td>-</td><td>-</td>
             <td><input type="text" id="s-to10purple" value="${numDisplay(s.to10purple)}" placeholder="0"></td>
             <td><input type="text" id="s-to10gold" value="${numDisplay(s.to10gold)}" placeholder="0"></td>
           </tr>
           <tr>
             <td style="text-align:left;">스킬트리 전체 노드 (캐릭터당 1회)</td>
-            <td>—</td>
+            <td>-</td>
             <td><input type="text" id="s-treeBlue" value="${numDisplay(s.treeBlue)}" placeholder="0"></td>
             <td><input type="text" id="s-treePurple" value="${numDisplay(s.treePurple)}" placeholder="0"></td>
             <td><input type="text" id="s-treeGold" value="${numDisplay(s.treeGold)}" placeholder="0"></td>
@@ -506,7 +586,7 @@ function renderRecommendPanel(){
   const cardsHtml = combos.map((c,i)=>`
     <div class="party-card">
       <div class="party-head">
-        <div style="font-weight:700;">추천 조합 ${i+1}${c.synergy ? ' <span class="note" style="display:inline;color:var(--gold);">· 속성 시너지</span>' : ''}</div>
+        <div style="font-weight:700;">추천 조합 ${i+1}${c.synergy ? '<span class="synergy">속성 시너지</span>' : ''}</div>
         <button class="btn btn-small btn-gold combo-use" data-combo="${i}">이 조합으로 파티 만들기</button>
       </div>
       <div class="party-slots">
@@ -568,31 +648,39 @@ function renderPartyTab(){
 ========================================================= */
 function findTrainee(id){ return state.trainees.find(t=>t.id===id); }
 
+function bindRosterPills(){
+  document.querySelectorAll('#rosterGroups .pill').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      const rid = p.dataset.rid;
+      if(state.trainees.some(t=>t.rosterId===rid)){ showToast('이미 추가된 캐릭터입니다'); return; }
+      const c = ROSTER.find(x=>x.id===rid);
+      state.trainees.push({
+        id: uid('tr'), rosterId: c.id, name: c.name, element: c.element, weapon: c.weapon, position: c.position,
+        active: true, fillAll: false,
+        skills: {basic:'none', skill:'none', circuit:'none', liberation:'none', intro:'none'},
+      });
+      scheduleSave('trainees');
+      renderAll();
+    });
+  });
+}
+
 function bindEvents(){
   const main = document.getElementById('mainArea');
 
   if(activeTab === 'train'){
     const search = main.querySelector('#searchInput');
-    if(search) search.addEventListener('input', e=>{ searchQuery = e.target.value; renderAll(); });
+    if(search) search.addEventListener('input', e=>{
+      searchQuery = e.target.value;
+      const box = main.querySelector('#rosterGroups');
+      if(box){ box.innerHTML = renderRosterGroups(); bindRosterPills(); }
+    });
     const grpEl = main.querySelector('#grp-element');
     if(grpEl) grpEl.addEventListener('click', ()=>{ groupMode='element'; renderAll(); });
     const grpWp = main.querySelector('#grp-weapon');
     if(grpWp) grpWp.addEventListener('click', ()=>{ groupMode='weapon'; renderAll(); });
 
-    main.querySelectorAll('.pill').forEach(p=>{
-      p.addEventListener('click', ()=>{
-        const rid = p.dataset.rid;
-        if(state.trainees.some(t=>t.rosterId===rid)){ showToast('이미 추가된 캐릭터입니다'); return; }
-        const c = ROSTER.find(x=>x.id===rid);
-        state.trainees.push({
-          id: uid('tr'), rosterId: c.id, name: c.name, element: c.element, weapon: c.weapon, position: c.position,
-          active: true, fillAll: false,
-          skills: {basic:'none', skill:'none', circuit:'none', liberation:'none', intro:'none'},
-        });
-        scheduleSave('trainees');
-        renderAll();
-      });
-    });
+    bindRosterPills();
 
     const settingsToggle = main.querySelector('#settings-toggle');
     if(settingsToggle) settingsToggle.addEventListener('click', ()=>{ settingsOpen = !settingsOpen; renderAll(); });
@@ -663,8 +751,8 @@ function bindEvents(){
         try{
           const parsed = JSON.parse(reader.result);
           if(parsed.trainees) state.trainees = normalize('trainees', parsed.trainees);
-          if(parsed.parties) state.parties = parsed.parties;
-          if(parsed.settings) state.settings = parsed.settings;
+          if(parsed.parties) state.parties = normalize('parties', parsed.parties);
+          if(parsed.settings) state.settings = normalize('settings', parsed.settings);
           STORAGE_KEYS.forEach(scheduleSave);
           showToast('불러오기 완료');
           renderAll();

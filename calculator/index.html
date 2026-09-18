@@ -33,7 +33,7 @@
   }
   button.pill:hover{background:rgba(122,220,196,0.08);box-shadow:inset 0 0 0 1px var(--primary), inset 3px 0 0 var(--pc, var(--primary));}
   button.pill:active{transform:scale(0.97);}
-  button.pill.added{opacity:0.45;cursor:default;}
+  button.pill.added{color:var(--faint);background:transparent;cursor:default;}
 
   .totals-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
   @media (max-width:560px){.totals-grid{grid-template-columns:repeat(2,1fr);}}
@@ -59,7 +59,7 @@
     box-shadow:inset 0 0 0 1px var(--line);
     transition:opacity .35s var(--ease);
   }
-  .trainee-card.inactive{opacity:0.5;}
+  .trainee-card.inactive{opacity:0.8;}
   .trainee-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
   .trainee-name{font-family:var(--font-display);font-weight:600;font-size:17px;margin-right:6px;}
   .trainee-tags{font-size:12.5px;color:var(--muted);margin-right:8px;}
@@ -94,18 +94,19 @@
 
 <header class="app-header">
   <div class="brand-row">
-    <a class="brand" href="../" aria-label="Fair Winds 홈으로">
+    <a class="brand" href="../index.html" aria-label="Fair Winds 홈으로">
       <span class="brand-mark"><svg aria-hidden="true"><use href="#i-wind"/></svg></span>
       <span class="brand-name">Fair Winds<span class="brand-sub">명조 비공식 플래너</span></span>
     </a>
   </div>
   <h1 class="page-title">스킬 재화 계산기</h1>
   <p class="page-lede">스킬 레벨업에 필요한 재화를 합산하고, 포지션과 속성으로 파티를 추천합니다.</p>
-  <nav class="tabs" id="tabNav" aria-label="스킬 재화 계산기 메뉴"></nav>
 </header>
+<nav class="tabs" id="tabNav" aria-label="스킬 재화 계산기 메뉴"></nav>
 <main id="mainArea"></main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="../assets/fw.js"></script>
 <script>
 /* =========================================================
    저장 어댑터 (window.storage 없으면 localStorage로 자동 폴백)
@@ -222,17 +223,61 @@ const saveTimers = {};
 
 /* 저장된 데이터의 스키마가 나중에 바뀌어도(예: trainee에 position 필드 추가) 깨지지 않도록
    로드 직후 한 번 보정. 가챠 플래너의 normalize() 패턴과 동일한 역할. */
+/* 저장된 값과 가져온 JSON 은 HTML 에 끼워 넣기 전에 여기서 한 번 걸러낸다:
+   id 는 [A-Za-z0-9_-] 만, 속성/무기/포지션/스킬 값은 허용 목록 안에서만, 설정은 0 이상의 정수만 통과. */
+function safeId(v){
+  return String(v == null ? '' : v).replace(/[^\w-]/g,'_') || uid('x');
+}
+function hasOwn(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
+
 function normalize(key, value){
   if(value == null) return value;
-  if(key === 'trainees' && Array.isArray(value)){
-    return value.map(t=>{
-      const rosterId = LEGACY_ROSTER_IDS[t.rosterId] || t.rosterId;
+
+  if(key === 'trainees'){
+    if(!Array.isArray(value)) return [];
+    return value.filter(t=> t && typeof t === 'object').map(t=>{
+      const rosterId = safeId(hasOwn(LEGACY_ROSTER_IDS, t.rosterId) ? LEGACY_ROSTER_IDS[t.rosterId] : t.rosterId);
       const r = ROSTER.find(x=>x.id===rosterId);
-      if(!r) return {position:'unset', ...t, rosterId};
-      const position = (t.position && t.position !== 'unset') ? t.position : r.position;
-      return {...t, rosterId, name:r.name, element:r.element, weapon:r.weapon, position};
+      const sk = (t.skills && typeof t.skills === 'object') ? t.skills : {};
+      const savedPos = POSITIONS.includes(t.position) ? t.position : null;
+      return {
+        id: safeId(t.id),
+        rosterId,
+        name: r ? r.name : String(t.name == null ? '' : t.name),
+        element: r ? r.element : (ELEMENTS.includes(t.element) ? t.element : ELEMENTS[0]),
+        weapon: r ? r.weapon : (WEAPONS.includes(t.weapon) ? t.weapon : WEAPONS[0]),
+        position: savedPos || (r ? r.position : 'unset'),
+        active: t.active !== false,
+        fillAll: !!t.fillAll,
+        skills: Object.fromEntries(SKILL_DEFS.map(sd=>[sd.key, (sk[sd.key]==='6' || sk[sd.key]==='10') ? sk[sd.key] : 'none'])),
+      };
     });
   }
+
+  if(key === 'parties'){
+    if(!Array.isArray(value)) return [];
+    return value.filter(p=> p && typeof p === 'object').map(p=>{
+      const slots = Array.isArray(p.slots) ? p.slots : [];
+      return {
+        id: safeId(p.id),
+        name: String(p.name == null ? '' : p.name),
+        slots: [0,1,2].map(i=> (typeof slots[i] === 'string' && slots[i]) ? safeId(slots[i]) : null),
+      };
+    });
+  }
+
+  if(key === 'settings'){
+    const d = defaultSettings();
+    const s = (value && typeof value === 'object') ? value : {};
+    const out = {};
+    Object.keys(d).forEach(k=>{
+      if(typeof d[k] === 'boolean'){ out[k] = s[k] === undefined ? d[k] : !!s[k]; return; }
+      const n = Number(s[k]);
+      out[k] = (s[k] !== null && s[k] !== '' && Number.isFinite(n)) ? Math.max(0, Math.trunc(n)) : d[k];
+    });
+    return out;
+  }
+
   return value;
 }
 
@@ -308,45 +353,22 @@ let groupMode = 'element'; // 'element' | 'weapon'
 let searchQuery = '';
 let settingsOpen = false;
 
-function playViewEnter(){
-  const m = document.getElementById('mainArea');
-  m.classList.remove('view-enter');
-  void m.offsetWidth;
-  m.classList.add('view-enter');
-}
-
 function renderNav(){
   const nav = document.getElementById('tabNav');
-  nav.innerHTML = TABS.map(t=>`<button data-tab="${t.id}" class="${t.id===activeTab?'active':''}"${t.id===activeTab?' aria-current="page"':''}>${t.label}</button>`).join('');
-  nav.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ activeTab=b.dataset.tab; renderAll(); playViewEnter(); }));
-}
-/* 입력 중 화면을 다시 그려도 포커스와 커서 위치가 유지되도록 저장/복원 */
-const FOCUS_SEL = 'input[type=text],input[type=date],input:not([type]),select,textarea';
-function captureFocus(root){
-  const a = document.activeElement;
-  if(!a || !root.contains(a) || !a.matches(FOCUS_SEL)) return null;
-  const idx = [...root.querySelectorAll('input,select,textarea')].indexOf(a);
-  return idx < 0 ? null : {idx, s:a.selectionStart, e:a.selectionEnd};
-}
-function restoreFocus(root, f){
-  if(!f) return;
-  const el = [...root.querySelectorAll('input,select,textarea')][f.idx];
-  if(!el) return;
-  el.focus({preventScroll:true});
-  try{ if(f.s != null) el.setSelectionRange(f.s, f.e); }catch(_){ /* select/date 등은 무시 */ }
-}
-
-/* 좁은 화면에서 표가 찌그러지지 않도록 가로 스크롤 래퍼로 감쌈 */
-function wrapTables(root){
-  root.querySelectorAll('table').forEach(t=>{
-    if(t.parentElement.classList.contains('table-scroll')) return;
-    const w = document.createElement('div');
-    w.className = 'table-scroll';
-    t.parentNode.insertBefore(w, t);
-    w.appendChild(t);
+  if(!nav.children.length){
+    nav.innerHTML = TABS.map(t=>`<button type="button" data-tab="${t.id}">${t.label}</button>`).join('');
+    nav.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ activeTab = btn.dataset.tab; renderAll(); playViewEnter(); });
+    });
+  }
+  nav.querySelectorAll('button').forEach(btn=>{
+    const on = btn.dataset.tab === activeTab;
+    btn.classList.toggle('active', on);
+    if(on) btn.setAttribute('aria-current','page'); else btn.removeAttribute('aria-current');
   });
 }
 
+/* 포커스 복원, 표 래퍼, 탭 전환 모션은 ../assets/fw.js 에 있음 */
 function renderAll(){
   renderNav();
   const m = document.getElementById('mainArea');
@@ -729,8 +751,8 @@ function bindEvents(){
         try{
           const parsed = JSON.parse(reader.result);
           if(parsed.trainees) state.trainees = normalize('trainees', parsed.trainees);
-          if(parsed.parties) state.parties = parsed.parties;
-          if(parsed.settings) state.settings = parsed.settings;
+          if(parsed.parties) state.parties = normalize('parties', parsed.parties);
+          if(parsed.settings) state.settings = normalize('settings', parsed.settings);
           STORAGE_KEYS.forEach(scheduleSave);
           showToast('불러오기 완료');
           renderAll();

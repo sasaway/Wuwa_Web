@@ -23,6 +23,8 @@
     font-size:14px;
     margin:32px 0 14px;
     color:var(--text);
+    background:rgba(255,255,255,0.05);
+    box-shadow:inset 4px 0 0 var(--hh);
     background:color-mix(in srgb, var(--hh) 12%, transparent);
     box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--hh) 32%, transparent), inset 4px 0 0 var(--hh);
   }
@@ -32,8 +34,8 @@
   .half-header.auto{--hh:var(--auto);}
   .half-header.monthly{--hh:var(--monthly);}
   .half-header.endcontent{--hh:var(--endcontent);}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
-  @media (max-width:720px){.grid2{grid-template-columns:1fr;}}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;}
+  @media (max-width:720px){.grid2{grid-template-columns:minmax(0,1fr);}}
 
   .row-acquired{background:rgba(95,203,154,0.07);color:var(--muted);}
   .row-acquired td:first-child::after{content:" ✓";color:var(--ok);font-weight:700;}
@@ -53,7 +55,7 @@
 
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   .cal-nav span{font-family:var(--font-display);font-weight:600;font-size:16px;}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;}
   .cal-cell{min-height:60px;background:rgba(255,255,255,0.03);border-radius:10px;padding:5px;font-size:11px;position:relative;}
   .cal-cell .d{color:var(--muted);}
   .cal-cell.empty{background:transparent;}
@@ -72,15 +74,15 @@
 
 <header class="app-header">
   <div class="brand-row">
-    <a class="brand" href="../" aria-label="Fair Winds 홈으로">
+    <a class="brand" href="../index.html" aria-label="Fair Winds 홈으로">
       <span class="brand-mark"><svg aria-hidden="true"><use href="#i-wind"/></svg></span>
       <span class="brand-name">Fair Winds<span class="brand-sub">명조 비공식 플래너</span></span>
     </a>
   </div>
   <h1 class="page-title">가챠 계획 시뮬레이터</h1>
   <p class="page-lede">보유·수급 재화로 다음 픽업까지 뽑기가 가능한지 계산합니다.</p>
-  <nav class="tabs" id="tabNav" aria-label="가챠 계획 메뉴"></nav>
 </header>
+<nav class="tabs" id="tabNav" aria-label="가챠 계획 메뉴"></nav>
 <main id="mainArea"></main>
 <footer class="app-footer">
   <p class="reset-note">모든 입력을 기본값으로 되돌립니다. 현재 상태 선택(버전, 반기)은 유지됩니다.</p>
@@ -88,6 +90,7 @@
 </footer>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="../assets/fw.js"></script>
 <script>
 /* =========================================================
    상수 / 계산 모델
@@ -437,54 +440,22 @@ const TABS = [
 ];
 let activeTab = 'main';
 
-function playViewEnter(){
-  const m = document.getElementById('mainArea');
-  m.classList.remove('view-enter');
-  void m.offsetWidth;
-  m.classList.add('view-enter');
-}
-
 function renderNav(){
   const nav = document.getElementById('tabNav');
-  nav.innerHTML = TABS.map(t=>
-    `<button data-tab="${t.id}" class="${t.id===activeTab?'active':''}"${t.id===activeTab?' aria-current="page"':''}>${t.label}</button>`
-  ).join('');
-  nav.querySelectorAll('button').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      activeTab = btn.dataset.tab;
-      renderAll();
-      playViewEnter();
+  if(!nav.children.length){
+    nav.innerHTML = TABS.map(t=>`<button type="button" data-tab="${t.id}">${t.label}</button>`).join('');
+    nav.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ activeTab = btn.dataset.tab; renderAll(); playViewEnter(); });
     });
+  }
+  nav.querySelectorAll('button').forEach(btn=>{
+    const on = btn.dataset.tab === activeTab;
+    btn.classList.toggle('active', on);
+    if(on) btn.setAttribute('aria-current','page'); else btn.removeAttribute('aria-current');
   });
 }
 
-/* 입력 중 화면을 다시 그려도 포커스와 커서 위치가 유지되도록 저장/복원 */
-const FOCUS_SEL = 'input[type=text],input[type=date],input:not([type]),select,textarea';
-function captureFocus(root){
-  const a = document.activeElement;
-  if(!a || !root.contains(a) || !a.matches(FOCUS_SEL)) return null;
-  const idx = [...root.querySelectorAll('input,select,textarea')].indexOf(a);
-  return idx < 0 ? null : {idx, s:a.selectionStart, e:a.selectionEnd};
-}
-function restoreFocus(root, f){
-  if(!f) return;
-  const el = [...root.querySelectorAll('input,select,textarea')][f.idx];
-  if(!el) return;
-  el.focus({preventScroll:true});
-  try{ if(f.s != null) el.setSelectionRange(f.s, f.e); }catch(_){ /* select/date 등은 무시 */ }
-}
-
-/* 좁은 화면에서 표가 찌그러지지 않도록 가로 스크롤 래퍼로 감쌈 */
-function wrapTables(root){
-  root.querySelectorAll('table').forEach(t=>{
-    if(t.parentElement.classList.contains('table-scroll')) return;
-    const w = document.createElement('div');
-    w.className = 'table-scroll';
-    t.parentNode.insertBefore(w, t);
-    w.appendChild(t);
-  });
-}
-
+/* 포커스 복원, 표 래퍼, 탭 전환 모션은 ../assets/fw.js 에 있음 */
 function renderAll(){
   renderNav();
   const main = document.getElementById('mainArea');

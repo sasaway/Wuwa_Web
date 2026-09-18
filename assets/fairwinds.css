@@ -135,11 +135,13 @@ nav.tabs{
   display:flex;
   gap:4px;
   width:max-content;
-  max-width:100%;
+  max-width:calc(100% - 40px);
+  margin-left:max(20px, calc((100% - 1040px) / 2 + 20px));
   overflow-x:auto;
   scrollbar-width:none;
   padding:5px;
-  margin:0 0 22px;
+  margin-top:0;
+  margin-bottom:22px;
   border-radius:999px;
   background:rgba(12,30,39,0.78);
   backdrop-filter:blur(18px) saturate(140%);
@@ -197,6 +199,7 @@ main{max-width:1040px;margin:0 auto;padding:0 20px 56px;}
 .empty-hint{color:var(--muted);font-size:13px;padding:12px 0;}
 .section-title{font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 8px;}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.grid2>*,.bento>*,.cal-grid>*{min-width:0;}
 .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .table-scroll table{min-width:440px;}
 .table-scroll td:first-child,.table-scroll th:first-child{min-width:112px;word-break:keep-all;}
@@ -356,6 +359,7 @@ tr:last-child td{border-bottom:0;}
 }
 
 @media (max-width:640px){
+  nav.tabs{margin-left:16px;max-width:calc(100% - 32px);}
   .app-header{padding:20px 16px 0;}
   main{padding:0 16px 40px;}
   .app-footer{padding:8px 16px 56px;}

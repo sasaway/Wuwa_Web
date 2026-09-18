@@ -274,16 +274,47 @@ async function loadAll(){
     activeVersionId: null,
   };
   for(const key of STORAGE_KEYS){
-    state[key] = normalize(key, await loadKey(key, defaults[key]));
+    state[key] = normalize(key, await loadKey(key, defaults[key]), defaults[key]);
   }
   loaded = true;
 }
 
-/* 구버전 데이터 마이그레이션 자리 — 스키마 바뀔 때마다 여기서 보정 */
-function normalize(key, value){
-  if(value == null) return value;
+/* 구버전 데이터 마이그레이션 자리. 스키마 바뀔 때마다 여기서 보정.
+   저장값의 형태가 기대와 다르면(깨진 값, null 등) 기본값으로 되돌려 화면 전체가 멈추지 않게 한다. */
+const ARRAY_KEYS = ['dailyWeekly','miscIncome','eventIncome','spendings','versions','bannerSchedule'];
+function isObj(v){ return v != null && typeof v === 'object' && !Array.isArray(v); }
+function normalize(key, value, fallback){
+  if(ARRAY_KEYS.includes(key)){
+    if(!Array.isArray(value)) return fallback;
+    const items = value.filter(isObj);
+    if(key === 'versions'){
+      return items.map(v=>({
+        ...v,
+        id: v.id ? String(v.id) : uid('ver'),
+        label: String(v.label == null ? '' : v.label),
+        characters: (Array.isArray(v.characters) ? v.characters : []).filter(isObj).map(c=>({
+          ...c,
+          id: c.id ? String(c.id) : uid('chr'),
+          chain: Math.min(6, Math.max(0, parseNum(c.chain))),
+          hasWeapon: !!c.hasWeapon,
+        })),
+      }));
+    }
+    return items.map(x=> (x.id != null && x.id !== '') ? {...x, id:String(x.id)} : {...x, id:uid('it')});
+  }
   if(key === 'holdings'){
-    return {star:Number(value.star||0), char:Number(value.char||0), weapon:Number(value.weapon||0)};
+    const h = isObj(value) ? value : {};
+    return {star:parseNum(h.star), char:parseNum(h.char), weapon:parseNum(h.weapon)};
+  }
+  if(key === 'currentStatus'){
+    const c = isObj(value) ? value : {};
+    return {
+      version: VERSION_OPTIONS.includes(c.version) ? c.version : fallback.version,
+      half: c.half === 'second' ? 'second' : 'first',
+    };
+  }
+  if(key === 'activeVersionId'){
+    return typeof value === 'string' ? value : null;
   }
   return value;
 }
@@ -294,6 +325,7 @@ function normalize(key, value){
 function scheduleSave(key){
   clearTimeout(saveTimers[key]);
   saveTimers[key] = setTimeout(async ()=>{
+    delete saveTimers[key];
     try{
       await storageAdapter.set(key, JSON.stringify(state[key]));
     }catch(e){
@@ -301,6 +333,16 @@ function scheduleSave(key){
     }
   }, 500);
 }
+/* 0.5초 대기 중에 탭을 닫거나 숨기면 남은 저장을 바로 실행 */
+function flushSaves(){
+  Object.keys(saveTimers).forEach(key=>{
+    clearTimeout(saveTimers[key]);
+    delete saveTimers[key];
+    try{ storageAdapter.set(key, JSON.stringify(state[key])); }catch(e){ /* 떠나는 중이라 알릴 곳이 없음 */ }
+  });
+}
+window.addEventListener('pagehide', flushSaves);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') flushSaves(); });
 
 /* versions 목록이 바뀔 때(추가/삭제/초기화) activeVersionId가 존재하지 않는 버전을
    가리키고 있으면 첫 번째 버전으로 되돌림. 로드 직후에도 호출해서 과거 저장 데이터
@@ -382,10 +424,19 @@ function getNextBanner(){
   return upcoming[0] || null;
 }
 
+/* 초기화 날짜 목록. 각 시즌의 시작일에 더해 종료일도 넣는다.
+   API에 다음 시즌이 아직 올라오지 않았어도 현재 시즌 종료일에 초기화가 한 번 더 있기 때문. */
+function resetDates(seasons){
+  const set = new Set();
+  (seasons||[]).forEach(s=>{
+    if(s.start) set.add(String(s.start).slice(0,10));
+    if(s.finish) set.add(String(s.finish).slice(0,10));
+  });
+  return [...set];
+}
 function countResetsBetween(seasons, from, to){
-  return (seasons||[]).filter(s=>{
-    if(!s.start) return false;
-    const d = new Date(s.start);
+  return resetDates(seasons).filter(ds=>{
+    const d = new Date(ds);
     return d > from && d <= to;
   }).length;
 }
@@ -516,13 +567,13 @@ function renderMainTab(){
     <div class="card">
       <h2>확보 가능 재화 합계</h2>
       <div class="stat-line"><span>별의 소리 (보유+수급+과금+엔드컨텐츠)</span><span class="v">${r.availableStar.toLocaleString()}</span></div>
-      <div class="stat-line"><span>· 엔드컨텐츠 보너스 (역경의 탑/해역 초기화 + 매트릭스 포함분)</span><span class="v">${r.bonus.toLocaleString()}</span></div>
+      <div class="stat-line"><span>· 엔드컨텐츠 보너스 (다음 픽업 전 역경의 탑·해역 초기화)</span><span class="v">${r.bonus.toLocaleString()}</span></div>
       <div class="stat-line"><span>캐릭뽑권</span><span class="v">${r.availableCharTickets.toLocaleString()}</span></div>
       <div class="stat-line"><span>무기뽑권</span><span class="v">${r.availableWeaponTickets.toLocaleString()}</span></div>
     </div>
 
     <div class="card">
-      <h2>가챠 계획 대비 결과 (다음 픽업 기준)</h2>
+      <h2>가챠 계획 대비 결과 (선택한 버전 기준)</h2>
       <div class="banner hope">
         <div class="banner-title">희망편 (픽뚫 없이 매번 승리)</div>
         <div class="stat-line"><span>필요 뽑기 수</span><span class="v">${r.hopeCharPulls.toLocaleString()}회</span></div>
@@ -561,11 +612,11 @@ function renderCalendar(){
   const markFor = (d)=>{
     if(!d) return '';
     let html = '';
-    state.toaSeasons.forEach(s=>{
-      if(isSameYMD(s.start,d)) html += `<div class="cal-bar toa" title="역경의 탑 초기화"></div>`;
+    resetDates(state.toaSeasons).forEach(ds=>{
+      if(isSameYMD(ds,d)) html += `<div class="cal-bar toa" title="역경의 탑 초기화"></div>`;
     });
-    state.whiwaSeasons.forEach(s=>{
-      if(isSameYMD(s.start,d)) html += `<div class="cal-bar whiwa" title="해역 초기화"></div>`;
+    resetDates(state.whiwaSeasons).forEach(ds=>{
+      if(isSameYMD(ds,d)) html += `<div class="cal-bar whiwa" title="해역 초기화"></div>`;
     });
     state.bannerSchedule.forEach(b=>{
       if(b.start && isSameYMD(b.start,d)) html += `<div class="cal-chip">${escapeHtml(b.label||'픽업')}픽업</div>`;
@@ -608,7 +659,7 @@ function renderScheduleTab(){
       <div class="note">
         역경의 탑·해역 시즌 데이터는 encore.moe API에서 자동으로 받아오고, 실패 시 2026-09-16 기준 확보해둔 실제 시즌 데이터(역경의 탑 40개, 해역 22개)로 자동 대체됩니다. 픽업 일정은 아래 표에서 직접 관리합니다.
       </div>
-      <div class="note" id="fetchStatus">일정 데이터 불러오는 중…</div>
+      <div class="note" id="fetchStatus">${escapeHtml(fetchStatusText)}</div>
     </div>
 
     <div class="card">
@@ -721,10 +772,11 @@ function eventRows(half){
       <td><input type="text" inputmode="numeric" class="ev-star" placeholder="0" value="${numDisplay(x.star)}"></td>
       <td><input type="text" inputmode="numeric" class="ev-char" placeholder="0" value="${numDisplay(x.char)}"></td>
       <td><input type="text" inputmode="numeric" class="ev-weapon" placeholder="0" value="${numDisplay(x.weapon)}"></td>
+      <td><input type="checkbox" class="ev-toggle" aria-label="습득" ${x.acquired?'checked':''}></td>
       <td><button class="btn btn-small ev-move" title="반대 반기로 이동">↔</button></td>
       <td><button class="btn btn-small btn-danger ev-del">삭제</button></td>
     </tr>
-  `).join('') || `<tr><td colspan="6" class="empty-hint">등록된 이벤트 수급이 없습니다</td></tr>`;
+  `).join('') || `<tr><td colspan="7" class="empty-hint">등록된 이벤트 수급이 없습니다</td></tr>`;
 }
 
 function renderIncomeTab(){
@@ -741,7 +793,7 @@ function renderIncomeTab(){
         <table><tr><th style="text-align:left;">항목</th><th>별</th><th>캐</th><th>무</th><th>습득</th></tr>${miscRows()}</table>
 
         <div class="section-title">이벤트 수급</div>
-        <div class="table-scroll"><table><tr><th>항목</th><th>별</th><th>캐</th><th>무</th><th></th><th></th></tr>${eventRows('first')}</table></div>
+        <div class="table-scroll"><table><tr><th>항목</th><th>별</th><th>캐</th><th>무</th><th>습득</th><th></th><th></th></tr>${eventRows('first')}</table></div>
         <button class="btn btn-small row-add ev-add" data-half="first">+ 이벤트 수급 추가</button>
       </div>
       <div>
@@ -750,7 +802,7 @@ function renderIncomeTab(){
         <table><tr><th style="text-align:left;">항목</th><th>별의 소리</th><th>습득</th></tr>${dwRows('second')}</table>
 
         <div class="section-title">이벤트 수급</div>
-        <div class="table-scroll"><table><tr><th>항목</th><th>별</th><th>캐</th><th>무</th><th></th><th></th></tr>${eventRows('second')}</table></div>
+        <div class="table-scroll"><table><tr><th>항목</th><th>별</th><th>캐</th><th>무</th><th>습득</th><th></th><th></th></tr>${eventRows('second')}</table></div>
         <button class="btn btn-small row-add ev-add" data-half="second">+ 이벤트 수급 추가</button>
       </div>
     </div>
@@ -1009,6 +1061,8 @@ function bindTabEvents(){
       if(c) c.addEventListener('input', e=>{ item.char=parseNum(e.target.value); scheduleSave('eventIncome'); renderAll(); });
       const w = row.querySelector('.ev-weapon');
       if(w) w.addEventListener('input', e=>{ item.weapon=parseNum(e.target.value); scheduleSave('eventIncome'); renderAll(); });
+      const tg = row.querySelector('.ev-toggle');
+      if(tg) tg.addEventListener('change', e=>{ item.acquired=e.target.checked; scheduleSave('eventIncome'); renderAll(); });
       const mv = row.querySelector('.ev-move');
       if(mv) mv.addEventListener('click', ()=>{ item.half = item.half==='first'?'second':'first'; scheduleSave('eventIncome'); renderAll(); });
       const del = row.querySelector('.ev-del');
@@ -1148,8 +1202,9 @@ async function fetchOne(urls){
   }
   return null;
 }
+/* 상태 문구는 변수에 두고 렌더할 때마다 그대로 그린다(다시 그려도 "불러오는 중"으로 돌아가지 않게) */
+let fetchStatusText = '일정 데이터 불러오는 중…';
 async function fetchScheduleData(){
-  const statusEl = ()=>document.getElementById('fetchStatus');
   try{
     const [toa, whiwa] = await Promise.all([
       fetchOne(['https://api-v2.encore.moe/api/ko/toa','https://api.encore.moe/ko/toa']),
@@ -1157,19 +1212,16 @@ async function fetchScheduleData(){
     ]);
     if(toa) state.toaSeasons = toa;
     if(whiwa) state.whiwaSeasons = whiwa;
-    if(activeTab === 'schedule'){
-      const el = statusEl();
-      if(el) el.textContent = (toa||whiwa)
-        ? 'encore.moe API에서 시즌 데이터를 불러왔습니다.'
-        : 'API 응답을 해석하지 못했습니다. 픽업 일정은 아래 표에서 직접 관리하세요.';
-      renderAll();
-    }
+    fetchStatusText = (toa && whiwa) ? 'encore.moe API에서 시즌 데이터를 불러왔습니다.'
+      : (toa || whiwa) ? 'API에서 일부 시즌 데이터만 불러왔습니다. 나머지는 저장된 시즌 데이터로 표시합니다.'
+      : 'API 응답을 받지 못했습니다. 저장된 시즌 데이터로 표시합니다.';
   }catch(e){
-    if(activeTab === 'schedule'){
-      const el = statusEl();
-      if(el) el.textContent = 'API 호출에 실패했습니다. 저장된 시즌 데이터로 표시합니다.';
-    }
+    fetchStatusText = 'API 호출에 실패했습니다. 저장된 시즌 데이터로 표시합니다.';
   }
+  /* 글자 입력 중(한글 조합 포함)이면 다시 그리지 않는다. 결과는 다음 렌더 때 반영된다. */
+  const a = document.activeElement;
+  const typing = a && a.matches('input[type=text],input:not([type])') && document.getElementById('mainArea').contains(a);
+  if(!typing) renderAll();
 }
 
 /* =========================================================

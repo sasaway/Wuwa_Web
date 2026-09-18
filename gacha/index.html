@@ -386,7 +386,7 @@ const FALLBACK_WHIWA_SEASONS = [
 /* =========================================================
    상태 / 저장
 ========================================================= */
-const STORAGE_KEYS = ['dailyWeekly','miscIncome','eventIncome','spendings','versions','holdings','currentStatus','bannerSchedule'];
+const STORAGE_KEYS = ['dailyWeekly','miscIncome','eventIncome','spendings','versions','holdings','currentStatus','bannerSchedule','activeVersionId'];
 
 let state = {
   dailyWeekly: defaultDailyWeekly(),
@@ -397,6 +397,7 @@ let state = {
   holdings: defaultHoldings(),
   currentStatus: defaultCurrentStatus(),
   bannerSchedule: defaultBannerSchedule(),
+  activeVersionId: null,
   toaSeasons: FALLBACK_TOA_SEASONS.slice(),
   whiwaSeasons: FALLBACK_WHIWA_SEASONS.slice(),
 };
@@ -444,6 +445,7 @@ async function loadAll(){
     holdings: defaultHoldings(),
     currentStatus: defaultCurrentStatus(),
     bannerSchedule: defaultBannerSchedule(),
+    activeVersionId: null,
   };
   for(const key of STORAGE_KEYS){
     state[key] = normalize(key, await loadKey(key, defaults[key]));
@@ -472,6 +474,15 @@ function scheduleSave(key){
       showToast('저장 실패: ' + key);
     }
   }, 500);
+}
+
+/* versions 목록이 바뀔 때(추가/삭제/초기화) activeVersionId가 존재하지 않는 버전을
+   가리키고 있으면 첫 번째 버전으로 되돌림. 로드 직후에도 호출해서 과거 저장 데이터
+   (activeVersionId 없음)를 마이그레이션함. */
+function ensureActiveVersion(){
+  if(!state.versions.find(v=>v.id===state.activeVersionId)){
+    state.activeVersionId = state.versions[0] ? state.versions[0].id : null;
+  }
 }
 
 function showToast(msg){
@@ -564,7 +575,7 @@ function endContentBonusStar(){
 }
 
 function computeMainResult(){
-  const version = state.versions[0];
+  const version = state.versions.find(v=>v.id===state.activeVersionId) || state.versions[0];
   let hopeCharPulls = 0, despairCharPulls = 0, weaponPullsTotal = 0;
   (version ? version.characters : []).forEach(c=>{
     hopeCharPulls += charPullsHope(c.chain);
@@ -632,6 +643,7 @@ function renderAll(){
 ========================================================= */
 function renderMainTab(){
   const r = computeMainResult();
+  const activeVersion = state.versions.find(v=>v.id===state.activeVersionId) || state.versions[0];
   return `
     <div class="card">
       <h2>현재 상태</h2>
@@ -654,7 +666,7 @@ function renderMainTab(){
           </td>
         </tr>
       </table>
-      <div class="note">현재 표시·저장 용도. 아래 계산은 여전히 "가챠 계획" 최상단 버전 기준(versions[0])입니다.</div>
+      <div class="note">현재 표시·저장 용도. 아래 계산은 "가챠 계획" 탭에서 선택한 버전(${activeVersion ? escapeHtml(activeVersion.label) : '없음'}) 기준입니다.</div>
     </div>
 
     <div class="card">
@@ -797,11 +809,14 @@ function renderScheduleTab(){
    3. 가챠 계획 탭
 ========================================================= */
 function renderPlanTab(){
-  const versionsHtml = state.versions.map((v, vi)=>`
+  const versionsHtml = state.versions.map((v)=>`
     <div class="card" data-vid="${v.id}">
       <table style="margin-bottom:6px;"><tr>
         <td style="text-align:left;"><input type="text" class="v-label" value="${escapeHtml(v.label)}" style="width:80px;"></td>
-        <td style="text-align:right;">${vi===0 ? '<span class="note">메인 계산 반영 버전</span>' : ''}
+        <td style="text-align:right;">
+          <label class="note" style="cursor:pointer;">
+            <input type="radio" name="active-version" class="v-active" ${state.activeVersionId===v.id ? 'checked' : ''}> 메인 계산 반영 버전
+          </label>
           <button class="btn btn-small btn-danger v-del" style="margin-left:8px;">버전 삭제</button>
         </td>
       </tr></table>
@@ -1079,7 +1094,9 @@ function bindTabEvents(){
   if(activeTab === 'plan'){
     main.querySelector('#ver-add').addEventListener('click', ()=>{
       state.versions.push({id:uid('ver'), label:'새 버전', characters:[]});
+      ensureActiveVersion();
       scheduleSave('versions');
+      scheduleSave('activeVersionId');
       renderAll();
     });
     main.querySelectorAll('[data-vid]').forEach(vcard=>{
@@ -1087,9 +1104,18 @@ function bindTabEvents(){
       const ver = findById(state.versions, vid);
       if(!ver) return;
       vcard.querySelector('.v-label').addEventListener('input', e=>{ ver.label=e.target.value; scheduleSave('versions'); });
+      vcard.querySelector('.v-active').addEventListener('change', e=>{
+        if(e.target.checked){
+          state.activeVersionId = ver.id;
+          scheduleSave('activeVersionId');
+          renderAll();
+        }
+      });
       vcard.querySelector('.v-del').addEventListener('click', ()=>{
         state.versions = state.versions.filter(x=>x.id!==vid);
+        ensureActiveVersion();
         scheduleSave('versions');
+        scheduleSave('activeVersionId');
         renderAll();
       });
       vcard.querySelector('.c-add').addEventListener('click', ()=>{
@@ -1253,6 +1279,7 @@ document.getElementById('resetAllBtn').addEventListener('click', (e)=>{
     state.versions = defaultVersions();
     state.holdings = defaultHoldings();
     state.bannerSchedule = defaultBannerSchedule();
+    ensureActiveVersion();
     STORAGE_KEYS.filter(k=>k!=='currentStatus').forEach(scheduleSave);
     showToast('전체 데이터를 기본값으로 되돌렸습니다 (현재 상태 선택은 유지됨)');
     renderAll();
@@ -1318,6 +1345,7 @@ async function fetchScheduleData(){
 ========================================================= */
 (async function init(){
   await loadAll();
+  ensureActiveVersion();
   renderAll();
   fetchScheduleData();
 })();

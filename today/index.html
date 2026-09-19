@@ -104,16 +104,15 @@
 <script src="../assets/fw.js"></script>
 <script src="../assets/store.js"></script>
 <script src="../assets/plates.js"></script>
+<script src="../assets/kst.js"></script>
 <script>
 /* =========================================================
    상수
-   초기화 시각은 아시아 서버 기준(서버 시간 04:00 = 한국 시간 05:00)으로 가정하고,
-   브라우저의 로컬 시간이 한국 시간이라고 본다.
+   초기화 시각은 아시아 서버 기준 한국 시간(KST) 05:00이다. 방문자의 시간대와 무관하게
+   항상 같은 절대 시각이 되도록 assets/kst.js가 고정 UTC+9 오프셋으로 계산한다.
 ========================================================= */
-const RESET_HOUR = 5;
 const DAY_MS = 86400000;
 const PLATE_MAX = FwPlates.PLATE_MAX;
-const PLATE_REGEN_MS = FwPlates.PLATE_REGEN_MS; // 6분에 1개, 하루 240개
 const WEEKDAYS = ['일','월','화','수','목','금','토'];
 
 /* 플레이트 소모처. 이름과 소모량은 게임과 대조하지 않은 기본값이며 설정에서 바꿀 수 있다. */
@@ -160,6 +159,9 @@ const STORAGE_KEYS = ['checklist','plates','plan','costs'];
 const saveTimers = {};
 
 function uid(p){ return p + '_' + Math.random().toString(36).slice(2,9); }
+/* 저장된 값(localStorage)이 다른 스크립트/확장 프로그램에 의해 변조됐더라도 id가
+   HTML 속성에 그대로 꽂혀도 안전하도록 걸러낸다 (calculator의 safeId와 동일한 규칙). */
+function safeId(v){ return String(v == null ? '' : v).replace(/[^\w-]/g,'_') || uid('pl'); }
 function isObj(v){ return v != null && typeof v === 'object' && !Array.isArray(v); }
 function parseNum(v){ const n = parseInt(v,10); return isNaN(n) ? 0 : n; }
 function numDisplay(n){ return (!n) ? '' : String(n); }
@@ -193,7 +195,7 @@ function normalize(key, value){
       Object.keys(value).forEach(date=>{
         if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(value[date])) return;
         out[date] = value[date].filter(isObj).map(e=>({
-          id: e.id ? String(e.id) : uid('pl'),
+          id: safeId(e.id),
           kind: KIND_KEYS.includes(e.kind) ? e.kind : KIND_KEYS[0],
           runs: Math.max(0, parseNum(e.runs)),
           done: !!e.done,
@@ -248,37 +250,29 @@ function showToast(msg){
 
 /* =========================================================
    날짜 / 초기화 계산
+   모두 epoch ms를 주고받는다. 실제 KST 계산은 assets/kst.js(FwKst)에 있고, 여기서는
+   그 결과를 이 페이지의 상태(체크리스트 주기, 시즌 데이터)와 엮기만 한다.
 ========================================================= */
-function ymd(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
-function atReset(dateStr){ const [y,m,d] = dateStr.split('-').map(Number); return new Date(y, m-1, d, RESET_HOUR); }
-/* 게임 날짜: 05:00 전이면 전날로 본다 */
-function gameDate(now){ return new Date(now.getTime() - RESET_HOUR * 3600000); }
-function dailyStart(now){
-  const d = new Date(now); d.setHours(RESET_HOUR,0,0,0);
-  if(d > now) d.setDate(d.getDate()-1);
-  return d;
-}
-function weeklyStart(now){
-  const d = dailyStart(now);
-  while(d.getDay() !== 1) d.setDate(d.getDate()-1);
-  return d;
-}
+const ymd = FwKst.ymd;
+const atReset = FwKst.atReset;
+const dailyStart = FwKst.dailyStart;
+const weeklyStart = FwKst.weeklyStart;
 function resetDates(seasons){
   const set = new Set();
   (seasons||[]).forEach(s=>{
     if(s.start) set.add(String(s.start).slice(0,10));
     if(s.finish) set.add(String(s.finish).slice(0,10));
   });
-  return [...set].filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s)).map(atReset).sort((a,b)=>a-b);
+  return [...set].filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s)).map(s=>atReset(s)).sort((a,b)=>a-b);
 }
 function seasonsFor(cycle){ return cycle === 'toa' ? toaSeasons : whiwaSeasons; }
 
 function periodStart(cycle, now){
-  if(cycle === 'daily') return dailyStart(now).getTime();
-  if(cycle === 'weekly') return weeklyStart(now).getTime();
+  if(cycle === 'daily') return dailyStart(now);
+  if(cycle === 'weekly') return weeklyStart(now);
   if(cycle === 'toa' || cycle === 'whiwa'){
-    const past = resetDates(seasonsFor(cycle)).filter(d=>d <= now);
-    return past.length ? past[past.length-1].getTime() : 0;
+    const past = resetDates(seasonsFor(cycle)).filter(ms=>ms <= now);
+    return past.length ? past[past.length-1] : 0;
   }
   return 0; // 직접: 체크를 풀기 전까지 유지
 }
@@ -286,8 +280,10 @@ function nextResetText(cycle, now){
   if(cycle === 'daily') return '매일 05:00 초기화';
   if(cycle === 'weekly') return '매주 월요일 05:00 초기화';
   if(cycle === 'toa' || cycle === 'whiwa'){
-    const next = resetDates(seasonsFor(cycle)).find(d=>d > now);
-    return next ? `${next.getMonth()+1}월 ${next.getDate()}일 05:00 초기화` : '다음 시즌 일정 없음';
+    const next = resetDates(seasonsFor(cycle)).find(ms=>ms > now);
+    if(!next) return '다음 시즌 일정 없음';
+    const p = FwKst.toParts(next);
+    return `${p.m+1}월 ${p.d}일 05:00 초기화`;
   }
   return '직접 해제할 때까지 유지';
 }
@@ -298,16 +294,15 @@ function fmtDuration(ms){
   const h = Math.floor(totalMin / 60), m = totalMin % 60;
   return h ? `${h}시간 ${m}분` : `${m}분`;
 }
-function fmtClock(d){ return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+function fmtClock(ms){ const p = FwKst.toParts(ms); return String(p.hh).padStart(2,'0') + ':' + String(p.mm).padStart(2,'0'); }
 
 /* =========================================================
    플레이트 추정
 ========================================================= */
 function plateEstimate(now){
-  const nowMs = now instanceof Date ? now.getTime() : now;
-  const est = FwPlates.estimate(state.plates, nowMs);
+  const est = FwPlates.estimate(state.plates, now);
   if(est.value == null) return null;
-  return {value: est.value, fullAt: est.fullAt == null ? null : new Date(est.fullAt)};
+  return {value: est.value, fullAt: est.fullAt};
 }
 
 /* =========================================================
@@ -316,12 +311,14 @@ function plateEstimate(now){
 let weekOffset = 0;
 let settingsOpen = false;
 let plateFixOpen = false;
+let lastUseClickAt = 0; // -40/-60/사용 버튼 연타 방지용 (renderAll()이 매번 bindEvents()를 다시 실행해
+                         // 이벤트 클로저를 새로 만들기 때문에, 이 값은 bindEvents() 밖에 둬야 다음 렌더까지 남는다)
 
 function renderTodayLine(now){
-  const g = gameDate(now);
-  const nextDaily = new Date(dailyStart(now).getTime() + DAY_MS);
+  const g = FwKst.gameDateParts(now);
+  const nextDaily = dailyStart(now) + DAY_MS;
   return `<div class="today-line">
-    <span>게임 날짜 <b>${g.getMonth()+1}월 ${g.getDate()}일 (${WEEKDAYS[g.getDay()]})</b></span>
+    <span>게임 날짜 <b>${g.m+1}월 ${g.d}일 (${WEEKDAYS[g.day]})</b></span>
     <span>다음 일일 초기화까지 <b id="resetLeft">${fmtDuration(nextDaily - now)}</b></span>
   </div>`;
 }
@@ -352,9 +349,8 @@ function renderChecklist(now){
 }
 
 function weekDays(now){
-  const start = weeklyStart(now);
-  start.setDate(start.getDate() + weekOffset * 7);
-  return Array.from({length:7}, (_,i)=>{ const d = new Date(start); d.setDate(d.getDate()+i); return d; });
+  const start = weeklyStart(now) + weekOffset * 7 * DAY_MS;
+  return Array.from({length:7}, (_,i)=> start + i * DAY_MS);
 }
 function dayUse(date){
   return (state.plan[date]||[]).reduce((sum,e)=> sum + e.runs * (state.costs[e.kind]||0), 0);
@@ -376,7 +372,7 @@ function renderEntry(e){
 function renderPlates(now){
   const est = plateEstimate(now);
   const days = weekDays(now);
-  const todayStr = ymd(gameDate(now));
+  const todayStr = FwKst.gameDateYmd(now);
   const first = days[0], last = days[6];
   let weekTotal = 0;
   const cols = days.map(d=>{
@@ -384,8 +380,9 @@ function renderPlates(now){
     const use = dayUse(ds);
     weekTotal += use;
     const cls = ds === todayStr ? 'today' : (ds < todayStr ? 'past' : '');
+    const p = FwKst.toParts(d);
     return `<div class="day ${cls}" data-date="${ds}">
-      <div class="day-head"><span class="dw">${WEEKDAYS[d.getDay()]}${ds===todayStr?' · 오늘':''}</span><span class="dd">${d.getMonth()+1}/${d.getDate()}</span></div>
+      <div class="day-head"><span class="dw">${WEEKDAYS[p.day]}${ds===todayStr?' · 오늘':''}</span><span class="dd">${p.m+1}/${p.d}</span></div>
       <div class="day-sum ${use > PLATE_MAX ? 'over' : ''}">사용 <b>${use}</b> / ${PLATE_MAX}</div>
       <div class="day-entries">${(state.plan[ds]||[]).map(renderEntry).join('')}</div>
       <button type="button" class="btn btn-small row-add day-add">+ 추가</button>
@@ -393,6 +390,7 @@ function renderPlates(now){
   }).join('');
 
   const s = state.costs;
+  const firstP = FwKst.toParts(first), lastP = FwKst.toParts(last);
   return `
     <div class="card">
       <h2>결정 플레이트</h2>
@@ -407,14 +405,14 @@ function renderPlates(now){
         <button type="button" class="btn btn-small" id="plate-fix-toggle">지금 개수 고치기</button>
       </div>
       <div class="plate-fix ${(plateFixOpen || est == null) ? 'open' : ''}" id="plateFix">
-        <label class="toggle" style="gap:10px;">지금 보유 <input type="text" inputmode="numeric" id="plate-fix-input" placeholder="0" value="${state.plates.value == null ? '' : state.plates.value}"> / ${PLATE_MAX}</label>
+        <label class="toggle" style="gap:10px;">지금 보유 <input type="text" inputmode="numeric" id="plate-fix-input" placeholder="0" value="${est ? est.value : ''}"> / ${PLATE_MAX}</label>
         <button type="button" class="btn btn-small" id="plate-fix-confirm">저장</button>
       </div>
       <div class="note" style="margin-top:0;">6분에 1개씩, 하루 ${PLATE_MAX}개 회복으로 계산합니다. 플레이트를 쓴 시각부터 다시 회복량을 더합니다.</div>
 
       <div class="week-nav">
         <button type="button" class="btn btn-small" id="week-prev" aria-label="이전 주">이전</button>
-        <span>${first.getMonth()+1}월 ${first.getDate()}일 ~ ${last.getMonth()+1}월 ${last.getDate()}일${weekOffset===0?'<small>이번 주</small>':''}</span>
+        <span>${firstP.m+1}월 ${firstP.d}일 ~ ${lastP.m+1}월 ${lastP.d}일${weekOffset===0?'<small>이번 주</small>':''}</span>
         <button type="button" class="btn btn-small" id="week-next" aria-label="다음 주">다음</button>
       </div>
       <div class="week-grid">${cols}</div>
@@ -439,12 +437,13 @@ function plateEstText(est, now){
   if(!est) return '보유량을 입력하면 가득 차는 시각을 알려 드립니다.';
   if(!est.fullAt) return `지금 약 <b>${est.value}</b>개 · 가득 찼습니다`;
   const sameDay = ymd(est.fullAt) === ymd(now);
-  const when = (sameDay ? '오늘 ' : `${est.fullAt.getMonth()+1}월 ${est.fullAt.getDate()}일 `) + fmtClock(est.fullAt);
+  const p = FwKst.toParts(est.fullAt);
+  const when = (sameDay ? '오늘 ' : `${p.m+1}월 ${p.d}일 `) + fmtClock(est.fullAt);
   return `지금 약 <b>${est.value}</b>개 · 가득 참 <b>${when}</b> (${fmtDuration(est.fullAt - now)} 뒤)`;
 }
 
 function renderAll(){
-  const now = new Date();
+  const now = Date.now();
   const m = document.getElementById('mainArea');
   const f = captureFocus(m);
   m.innerHTML = `
@@ -455,7 +454,8 @@ function renderAll(){
   wrapTables(m);
   bindEvents();
   restoreFocus(m, f);
-  lastSig = liveSignature(new Date());
+  lastSig = liveSignature(now);
+  lastCriticalSig = criticalSignature(now);
 }
 
 /* =========================================================
@@ -480,8 +480,11 @@ function bindEvents(){
   });
 
   function usePlates(amount){
+    const clickedAt = Date.now();
+    if(clickedAt - lastUseClickAt < 600) return; // 더블탭/연타로 두 번 소모되는 것 방지
+    lastUseClickAt = clickedAt;
     try{
-      state.plates = FwPlates.use(state.plates, amount, Date.now());
+      state.plates = FwPlates.use(state.plates, amount, clickedAt);
       scheduleSave('plates');
       renderAll();
     }catch(err){ showToast(err.message); }
@@ -544,28 +547,55 @@ function bindEvents(){
 }
 
 /* =========================================================
-   주기 갱신: 1분마다 게임 날짜·초기화 카운트다운·플레이트 추정치가
-   바뀌었는지 확인하고, 바뀐 게 있을 때만 다시 그림
+   주기 갱신: 1분마다 게임 날짜·초기화 카운트다운·플레이트 추정치가 바뀌었는지 확인한다.
+   초기화 카운트다운과 플레이트 추정치 텍스트는 매번 그 자리에서 갱신하고(입력 포커스를
+   건드리지 않음), 체크리스트를 다시 그려야 하는 구조적 변화(게임 날짜가 넘어갔거나
+   초기화 시각이 지나 완료 표시가 풀림)는 select 포커스와 무관하게 항상 반영한다.
+   전체 다시 그리기를 미루는 건 오직 "방금 글자를 입력 중인 텍스트 입력창"이 있을 때뿐이고,
+   그마저도 구조적 변화가 있으면 무시하고 바로 다시 그린다(체크리스트가 새벽 5시가 지나도록
+   멈춰 있으면 안 되므로).
 ========================================================= */
 let lastSig = '';
-function liveSignature(now){
-  const est = plateEstimate(now);
-  return [ymd(gameDate(now)), state.checklist.map(i=>isDone(i, now)?1:0).join(''), est ? est.value : '', Math.ceil((dailyStart(now).getTime() + DAY_MS - now) / 60000)].join('|');
-}
+let lastCriticalSig = '';
+let lastKeystrokeAt = 0;
+/* mainArea는 renderAll()마다 통째로 새로 그려지므로, 개별 입력창에 리스너를 다는 대신
+   document에 한 번만 델리게이션으로 건다(다시 그려도 이 리스너는 그대로 유지됨). */
+document.addEventListener('input', e=>{
+  if(e.target && e.target.matches && e.target.matches('input[type=text]')) lastKeystrokeAt = Date.now();
+});
 function isTyping(){
   const a = document.activeElement;
-  return !!(a && a.matches('input[type=text],select') && document.getElementById('mainArea').contains(a));
+  return !!(a && a.matches('input[type=text]') && document.getElementById('mainArea').contains(a));
+}
+/* "최근(3초 이내) 글자를 입력한 텍스트 입력창"에 포커스가 있을 때만 전체 다시 그리기를 미룬다.
+   select는 여기 포함하지 않는다 — select를 열어 둔 채로는 아무것도 안 바뀔 수 있어서, 그것 때문에
+   체크리스트가 영영 안 풀리는 게 원래 버그였다. */
+function recentlyTyping(){
+  return isTyping() && (Date.now() - lastKeystrokeAt) < 3000;
+}
+function liveSignature(now){
+  const est = plateEstimate(now);
+  return [FwKst.gameDateYmd(now), state.checklist.map(i=>isDone(i, now)?1:0).join(''), est ? est.value : ''].join('|');
+}
+/* 전체 다시 그리기를 절대 미루면 안 되는 변화만 담은 신호: 게임 날짜, 완료 상태. */
+function criticalSignature(now){
+  return [FwKst.gameDateYmd(now), state.checklist.map(i=>isDone(i, now)?1:0).join('')].join('|');
 }
 function tick(){
-  const now = new Date();
+  const now = Date.now();
+
+  // 초기화 카운트다운과 플레이트 추정치는 포커스를 건드리지 않고 매번 그 자리에서 갱신한다.
+  const r = document.getElementById('resetLeft');
+  if(r) r.textContent = fmtDuration(dailyStart(now) + DAY_MS - now);
+  const pe = document.getElementById('plateEst');
+  if(pe) pe.innerHTML = plateEstText(plateEstimate(now), now);
+
   const sig = liveSignature(now);
-  if(sig !== lastSig){
-    if(isTyping()){
-      const r = document.getElementById('resetLeft');
-      if(r) r.textContent = fmtDuration(dailyStart(now).getTime() + DAY_MS - now);
-    }else{
-      renderAll();
-    }
+  if(sig === lastSig) return;
+
+  const critSig = criticalSignature(now);
+  if(critSig !== lastCriticalSig || !recentlyTyping()){
+    renderAll();
   }
 }
 
@@ -596,11 +626,15 @@ async function fetchSeasons(){
   ]);
   if(toa) toaSeasons = toa;
   if(whiwa) whiwaSeasons = whiwa;
-  if(!isTyping()) renderAll();
+  if(!recentlyTyping()) renderAll();
 }
 
+/* 탭이 백그라운드에 있다가 다시 보일 때(또는 bfcache에서 복원될 때)는 그사이 게임 날짜가
+   넘어갔거나 플레이트가 계속 회복됐을 수 있으므로 즉시 한 번 갱신한다. */
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') tick(); });
+window.addEventListener('pageshow', ()=> tick());
+
 (async function init(){
-  try{ localStorage.removeItem('wuwa_today_timer'); }catch(e){ /* 무시 */ }
   await loadAll();
   renderAll();
   setInterval(tick, 60000);

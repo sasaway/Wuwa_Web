@@ -13,9 +13,17 @@ function fakeLocalStorage(){
   };
 }
 
+/* 최신 Node는 실험적으로 내장 localStorage를 전역에 이미 정의해 둘 수 있어(설정에 따라
+   getter만 있거나 non-configurable일 수 있음), 단순 대입(`global.localStorage = fake`)은
+   조용히 무시되거나 strict mode에서 던질 수 있다. defineProperty로 명시적으로 값을
+   교체(writable, configurable)해야 어느 Node 버전에서도 안정적으로 테스트용 fake가 먹힌다. */
+function installFakeLocalStorage(fake){
+  Object.defineProperty(globalThis, 'localStorage', { value: fake, writable: true, configurable: true });
+}
+
 test('set() writes under the given prefix, not the bare key', async () => {
   const fake = fakeLocalStorage();
-  global.localStorage = fake;
+  installFakeLocalStorage(fake);
   const adapter = FwStore.create('wuwa_test_');
   await adapter.set('foo', 'bar');
   assert.equal(fake.store['wuwa_test_foo'], 'bar');
@@ -23,14 +31,14 @@ test('set() writes under the given prefix, not the bare key', async () => {
 });
 
 test('get() of a missing key resolves null', async () => {
-  global.localStorage = fakeLocalStorage();
+  installFakeLocalStorage(fakeLocalStorage());
   const adapter = FwStore.create('wuwa_test_');
   const res = await adapter.get('missing');
   assert.equal(res, null);
 });
 
 test('set() then get() round-trips the stored string value', async () => {
-  global.localStorage = fakeLocalStorage();
+  installFakeLocalStorage(fakeLocalStorage());
   const adapter = FwStore.create('wuwa_test_');
   const setRes = await adapter.set('k', '{"a":1}');
   assert.deepEqual(setRes, {value: '{"a":1}'});
@@ -39,27 +47,26 @@ test('set() then get() round-trips the stored string value', async () => {
 });
 
 test('a throwing localStorage does not throw out of get() — resolves null instead', async () => {
-  global.localStorage = {
+  installFakeLocalStorage({
     getItem(){ throw new Error('blocked (private mode)'); },
     setItem(){ throw new Error('blocked (private mode)'); },
-  };
+  });
   const adapter = FwStore.create('wuwa_test_');
   const res = await adapter.get('anything');
   assert.equal(res, null);
 });
 
 test('a throwing localStorage rejects set() so callers can show a failure message', async () => {
-  global.localStorage = {
+  installFakeLocalStorage({
     getItem(){ return null; },
     setItem(){ throw new Error('blocked (private mode)'); },
-  };
+  });
   const adapter = FwStore.create('wuwa_test_');
   await assert.rejects(() => adapter.set('k', 'v'));
 });
 
 test('different prefixes keep separate keys isolated from each other', async () => {
-  const fake = fakeLocalStorage();
-  global.localStorage = fake;
+  installFakeLocalStorage(fakeLocalStorage());
   const gacha = FwStore.create('wuwa_gacha_');
   const calc = FwStore.create('wuwa_calc_');
   await gacha.set('holdings', '1');

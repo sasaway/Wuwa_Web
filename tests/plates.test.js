@@ -51,6 +51,25 @@ test('long idle at max, then use 60: value drops to 180, fullAt recalculated fro
   assert.equal(est.isFull, false);
 });
 
+test('use() preserves the regen phase instead of resetting the clock to "now" (partial progress is kept)', () => {
+  const t0 = 1_000_000;
+  const nineMin = 9 * 60 * 1000;
+  const now = t0 + nineMin; // 9 minutes after t0: exactly 1 full 6-minute tick plus 3 minutes partial progress
+  const result = FwPlates.use({ value: 100, at: t0 }, 10, now);
+  // 100 + floor(9/6)=1 gained -> 101 available, minus 10 used -> 91
+  assert.equal(result.value, 91);
+  // anchored to the last completed 6-minute tick (t0+6m), not to "now" (t0+9m) — the 3 minutes of
+  // partial progress since that tick are not thrown away
+  assert.equal(result.at, t0 + REGEN);
+
+  // so the next plate arrives at t0+12m (6 minutes after the anchor), not t0+15m (which a naive
+  // at=now reset would give)
+  const justBefore = FwPlates.estimate(result, t0 + 12 * 60 * 1000 - 1);
+  const atTwelve = FwPlates.estimate(result, t0 + 12 * 60 * 1000);
+  assert.equal(justBefore.value, 91);
+  assert.equal(atTwelve.value, 92);
+});
+
 test('use more than the current estimate is rejected, not clamped', () => {
   const plates = { value: 50, at: 0 };
   assert.throws(() => FwPlates.use(plates, 51, 0), /Error/);
@@ -76,12 +95,32 @@ test('setCurrent accepts integers within 0..240 and stamps "at"', () => {
   assert.deepEqual(FwPlates.setCurrent(120, 99), { value: 120, at: 99 });
 });
 
-test('setCurrent rejects out-of-bounds and non-integer values', () => {
+test('setCurrent accepts values above the natural 240 cap, up to 999 (items can push holdings past it)', () => {
+  assert.deepEqual(FwPlates.setCurrent(300, 12345), { value: 300, at: 12345 });
+  assert.deepEqual(FwPlates.setCurrent(999, 12345), { value: 999, at: 12345 });
+});
+
+test('setCurrent rejects out-of-bounds (negative, or above 999) and non-integer values', () => {
   assert.throws(() => FwPlates.setCurrent(-1, 0));
-  assert.throws(() => FwPlates.setCurrent(241, 0));
+  assert.throws(() => FwPlates.setCurrent(1000, 0));
   assert.throws(() => FwPlates.setCurrent(1.5, 0));
   assert.throws(() => FwPlates.setCurrent(NaN, 0));
   assert.throws(() => FwPlates.setCurrent(null, 0));
+});
+
+test('estimate() does not regenerate while value is at or above 240, and never reduces a value above 240', () => {
+  const at = 0;
+  const now = at + 10 * REGEN; // plenty of time for natural regen to apply, if it were allowed to
+  const est = FwPlates.estimate({ value: 300, at }, now);
+  assert.equal(est.value, 300); // unchanged — never pulled back down toward 240
+  assert.equal(est.isFull, true);
+  assert.equal(est.fullAt, null);
+});
+
+test('use() subtracts normally from a value that started above 240', () => {
+  const result = FwPlates.use({ value: 300, at: 0 }, 100, 0);
+  assert.equal(result.value, 200);
+  assert.equal(result.at, 0);
 });
 
 test('unset state (value null) is handled by estimate without throwing', () => {

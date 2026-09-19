@@ -324,7 +324,9 @@ function flushSaves(){
   Object.keys(saveTimers).forEach(key=>{
     clearTimeout(saveTimers[key]);
     delete saveTimers[key];
-    try{ storageAdapter.set(key, JSON.stringify(state[key])); }catch(e){ /* 떠나는 중이라 알릴 곳이 없음 */ }
+    /* storageAdapter.set()은 실패하면 reject되는 프로미스를 돌려준다 — await 없이 호출하면
+       동기 try/catch로는 못 잡으므로 .catch()로 받아서 버린다(떠나는 중이라 알릴 곳이 없음). */
+    try{ Promise.resolve(storageAdapter.set(key, JSON.stringify(state[key]))).catch(()=>{}); }catch(e){ /* 떠나는 중 */ }
   });
 }
 window.addEventListener('pagehide', flushSaves);

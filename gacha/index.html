@@ -91,6 +91,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="../assets/fw.js"></script>
+<script src="../assets/store.js"></script>
 <script>
 /* =========================================================
    상수 / 계산 모델
@@ -231,23 +232,8 @@ let state = {
 let loaded = false;
 const saveTimers = {};
 
-/* window.storage는 Claude 아티팩트 미리보기 전용 API — GitHub Pages 등 일반 배포 환경에는 없음.
-   있으면 window.storage를, 없으면 localStorage를 자동으로 쓰도록 어댑터로 감싸서
-   "미리보기에서 개발 → 그대로 배포"가 코드 수정 없이 되도록 함. */
-const hasArtifactStorage = typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function';
-const storageAdapter = hasArtifactStorage ? {
-  get: (key) => window.storage.get(key, false),
-  set: (key, value) => window.storage.set(key, value, false),
-} : {
-  get: async (key) => {
-    const v = localStorage.getItem('wuwa_gacha_' + key);
-    return v == null ? null : {value: v};
-  },
-  set: async (key, value) => {
-    localStorage.setItem('wuwa_gacha_' + key, value);
-    return {value};
-  },
-};
+/* 저장 어댑터: assets/store.js (localStorage 기반) */
+const storageAdapter = FwStore.create('wuwa_gacha_');
 
 async function loadKey(key, fallback){
   try{

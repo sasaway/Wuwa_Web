@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07141B">
+<title>오늘 할 일 | Fair Winds</title>
+<meta name="description" content="결정 플레이트 주간 사용 계획, 주기별 숙제 체크리스트를 한 화면에 모은 명조 비공식 도구입니다.">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="../assets/fairwinds.css">
+<style>
+  .today-line{display:flex;flex-wrap:wrap;gap:8px 18px;margin:-10px 0 22px;font-size:13px;color:var(--muted);}
+  .today-line b{color:var(--text);font-weight:600;}
+
+  /* 체크리스트 진행률 바 */
+  .progress-track{height:8px;border-radius:999px;background:rgba(255,255,255,0.05);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden;margin:18px 0;}
+  .progress-fill{height:100%;background:var(--primary);transform-origin:left center;transform:scaleX(0);}
+
+  /* 체크리스트 */
+  .progress-line{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px;}
+  .progress-line b{color:var(--text);}
+  .check-list{list-style:none;margin:0;padding:0;}
+  .check-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(147,185,220,0.10);}
+  .check-item:last-child{border-bottom:0;}
+  .check-item label.main{display:flex;align-items:center;gap:12px;flex:1 1 auto;min-width:0;}
+  .check-item .lbl{font-size:14.5px;}
+  .check-item .next{display:block;font-size:12px;color:var(--faint);}
+  .check-item.done .lbl{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(157,180,184,0.5);}
+  .check-item select{min-height:34px;font-size:12.5px;padding:0 6px;flex:0 0 auto;}
+
+  /* 플레이트 */
+  .plate-now{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;margin-bottom:6px;}
+  .plate-now .est{font-size:13.5px;color:var(--muted);}
+  .plate-now .est b{color:var(--text);font-weight:600;}
+  .plate-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;}
+  .plate-actions input{width:96px;text-align:center;}
+  .plate-fix{display:none;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:10px;}
+  .plate-fix.open{display:flex;}
+  .plate-fix input{width:84px;text-align:center;}
+
+  .week-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 12px;}
+  .week-nav span{font-family:var(--font-display);font-weight:600;font-size:15.5px;text-align:center;}
+  .week-nav small{display:block;font-family:var(--font-body);font-weight:500;font-size:12px;color:var(--primary);}
+  .week-nav button{white-space:nowrap;}
+  .week-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;}
+  .week-grid>*{min-width:0;}
+  .day{border-radius:16px;padding:10px 8px;background:rgba(255,255,255,0.025);box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;gap:8px;}
+  .day.today{box-shadow:inset 0 0 0 1.5px var(--primary);background:rgba(122,220,196,0.05);}
+  .day.past{opacity:0.72;}
+  .day-head{display:flex;justify-content:space-between;align-items:baseline;gap:4px;}
+  .day-head .dw{font-weight:700;font-size:13px;}
+  .day.today .day-head .dw{color:var(--primary);}
+  .day-head .dd{font-size:12px;color:var(--muted);}
+  .day-sum{font-size:12px;color:var(--muted);}
+  .day-sum b{color:var(--text);font-weight:600;}
+  .day-sum.over b{color:var(--bad);}
+  .entry{border-radius:12px;padding:6px;background:rgba(7,20,27,0.55);display:flex;flex-direction:column;gap:6px;}
+  .entry.done{opacity:0.6;}
+  .entry select{width:100%;min-height:34px;font-size:12px;padding:0 4px;}
+  .entry-row{display:flex;align-items:center;gap:6px;}
+  .entry-row input[type=text]{width:40px;flex:0 0 auto;min-height:32px;padding:0 4px;text-align:center;font-size:13px;}
+  .entry-row .cost{font-size:12px;color:var(--muted);flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .entry-row button{min-height:32px;min-width:0;padding:0 8px;flex:0 0 auto;}
+  .entry-row label.toggle{min-width:0;gap:6px;}
+  .day .row-add{margin-top:auto;width:100%;}
+  .week-sum{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:12px;font-size:13px;color:var(--muted);}
+  .week-sum b{color:var(--text);}
+
+  @media (max-width:900px){
+    .week-grid{grid-template-columns:minmax(0,1fr);}
+    .day{flex-direction:column;}
+    .day-entries{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+    .day-entries:empty{display:none;}
+    .day .row-add{width:auto;align-self:flex-start;margin-top:0;}
+  }
+
+  .settings-body{display:none;margin-top:12px;}
+  .settings-body.open{display:block;}
+  .settings-body td input[type=text]{width:72px;text-align:center;}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-wind" viewBox="0 0 256 256" fill="currentColor"><path d="M182,184a30,30,0,0,1-30,30c-12.9,0-25.36-8.38-29.63-19.92a6,6,0,0,1,11.26-4.16C136.13,196.69,144.2,202,152,202a18,18,0,0,0,0-36H40a6,6,0,0,1,0-12H152A30,30,0,0,1,182,184ZM150,72a30,30,0,0,0-30-30c-12.9,0-25.36,8.38-29.63,19.92a6,6,0,1,0,11.26,4.16C104.13,59.31,112.2,54,120,54a18,18,0,0,1,0,36H24a6,6,0,0,0,0,12h96A30,30,0,0,0,150,72Zm58,2c-12.9,0-25.36,8.38-29.63,19.92a6,6,0,1,0,11.26,4.16C192.13,91.31,200.2,86,208,86a18,18,0,0,1,0,36H32a6,6,0,0,0,0,12H208a30,30,0,0,0,0-60Z"/></symbol></svg>
+
+<header class="app-header">
+  <div class="brand-row">
+    <a class="brand" href="../index.html" aria-label="Fair Winds 홈으로">
+      <span class="brand-mark"><svg aria-hidden="true"><use href="#i-wind"/></svg></span>
+      <span class="brand-name">Fair Winds<span class="brand-sub">명조 비공식 플래너</span></span>
+    </a>
+  </div>
+  <h1 class="page-title">오늘 할 일</h1>
+  <p class="page-lede">결정 플레이트를 어디에 쓸지 정하고, 주기별 숙제를 확인합니다.</p>
+</header>
+<main id="mainArea"></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="../assets/fw.js"></script>
+<script src="../assets/store.js"></script>
+<script src="../assets/plates.js"></script>
+<script>
+/* =========================================================
+   상수
+   초기화 시각은 아시아 서버 기준(서버 시간 04:00 = 한국 시간 05:00)으로 가정하고,
+   브라우저의 로컬 시간이 한국 시간이라고 본다.
+========================================================= */
+const RESET_HOUR = 5;
+const DAY_MS = 86400000;
+const PLATE_MAX = FwPlates.PLATE_MAX;
+const PLATE_REGEN_MS = FwPlates.PLATE_REGEN_MS; // 6분에 1개, 하루 240개
+const WEEKDAYS = ['일','월','화','수','목','금','토'];
+
+/* 플레이트 소모처. 이름과 소모량은 게임과 대조하지 않은 기본값이며 설정에서 바꿀 수 있다. */
+const PLATE_KINDS = [
+  {key:'forgery', label:'스킬·무기 재료', long:'스킬·무기 재료 도전'},
+  {key:'sim', label:'경험치 재료', long:'경험치 재료 도전'},
+  {key:'boss', label:'돌파 보스', long:'보스 도전(돌파 재료)'},
+  {key:'tacet', label:'에코 필드', long:'에코 필드'},
+  {key:'weekly', label:'주간 보스', long:'주간 보스'},
+];
+function defaultCosts(){ return {forgery:40, sim:40, boss:60, tacet:60, weekly:60}; }
+
+const CYCLES = [
+  {key:'daily', label:'매일'},
+  {key:'weekly', label:'매주'},
+  {key:'toa', label:'탑 시즌'},
+  {key:'whiwa', label:'해역 시즌'},
+  {key:'manual', label:'직접'},
+];
+function defaultChecklist(){
+  return [
+    {id:'synth', label:'지정합성', cycle:'daily', doneAt:null},
+    {id:'weeklyboss', label:'주간보스', cycle:'weekly', doneAt:null},
+    {id:'event', label:'이벤트', cycle:'daily', doneAt:null},
+    {id:'toa', label:'역경의 탑', cycle:'toa', doneAt:null},
+    {id:'whiwa', label:'해역', cycle:'whiwa', doneAt:null},
+    {id:'matrix', label:'매트릭스', cycle:'manual', doneAt:null},
+    {id:'weeklyquest', label:'주간퀘스트', cycle:'weekly', doneAt:null},
+  ];
+}
+function defaultPlates(){ return {value:null, at:0}; }
+
+/* 시즌 데이터: encore.moe API에서 받고, 실패하면 아래 최근 값으로 대체 (2026-09-19 기준) */
+let toaSeasons = [{start:'2026-08-17',finish:'2026-09-14'},{start:'2026-09-14',finish:'2026-10-12'}];
+let whiwaSeasons = [{start:'2026-08-30',finish:'2026-09-27'},{start:'2026-09-27',finish:'2026-10-26'}];
+
+/* =========================================================
+   저장 (assets/store.js 참고)
+========================================================= */
+const storageAdapter = FwStore.create('wuwa_today_');
+
+let state = {checklist:defaultChecklist(), plates:defaultPlates(), plan:{}, costs:defaultCosts()};
+const STORAGE_KEYS = ['checklist','plates','plan','costs'];
+const saveTimers = {};
+
+function uid(p){ return p + '_' + Math.random().toString(36).slice(2,9); }
+function isObj(v){ return v != null && typeof v === 'object' && !Array.isArray(v); }
+function parseNum(v){ const n = parseInt(v,10); return isNaN(n) ? 0 : n; }
+function numDisplay(n){ return (!n) ? '' : String(n); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const KIND_KEYS = PLATE_KINDS.map(k=>k.key);
+const CYCLE_KEYS = CYCLES.map(c=>c.key);
+
+/* 저장값이 깨졌어도 화면이 멈추지 않게 형태를 확인하고 모자란 부분은 기본값으로 채운다 */
+function normalize(key, value){
+  if(key === 'checklist'){
+    const saved = Array.isArray(value) ? value.filter(isObj) : [];
+    return defaultChecklist().map(d=>{
+      const s = saved.find(x=>x.id === d.id) || {};
+      return {
+        ...d,
+        cycle: CYCLE_KEYS.includes(s.cycle) ? s.cycle : d.cycle,
+        doneAt: Number.isFinite(s.doneAt) ? s.doneAt : null,
+      };
+    });
+  }
+  if(key === 'plates'){
+    const p = isObj(value) ? value : {};
+    return {
+      value: Number.isFinite(p.value) ? Math.min(PLATE_MAX, Math.max(0, Math.trunc(p.value))) : null,
+      at: Number.isFinite(p.at) ? p.at : 0,
+    };
+  }
+  if(key === 'plan'){
+    const out = {};
+    if(isObj(value)){
+      Object.keys(value).forEach(date=>{
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(value[date])) return;
+        out[date] = value[date].filter(isObj).map(e=>({
+          id: e.id ? String(e.id) : uid('pl'),
+          kind: KIND_KEYS.includes(e.kind) ? e.kind : KIND_KEYS[0],
+          runs: Math.max(0, parseNum(e.runs)),
+          done: !!e.done,
+        }));
+      });
+    }
+    return out;
+  }
+  if(key === 'costs'){
+    const d = defaultCosts();
+    const c = isObj(value) ? value : {};
+    KIND_KEYS.forEach(k=>{ if(Number.isFinite(c[k]) && c[k] >= 0) d[k] = Math.trunc(c[k]); });
+    return d;
+  }
+  return value;
+}
+
+async function loadAll(){
+  for(const key of STORAGE_KEYS){
+    let raw;
+    try{
+      const res = await storageAdapter.get(key);
+      raw = (res && typeof res.value === 'string') ? JSON.parse(res.value) : undefined;
+    }catch(e){ raw = undefined; }
+    state[key] = normalize(key, raw);
+  }
+}
+function scheduleSave(key){
+  clearTimeout(saveTimers[key]);
+  saveTimers[key] = setTimeout(async ()=>{
+    delete saveTimers[key];
+    try{ await storageAdapter.set(key, JSON.stringify(state[key])); }
+    catch(e){ showToast('저장 실패: ' + key); }
+  }, 500);
+}
+function flushSaves(){
+  Object.keys(saveTimers).forEach(key=>{
+    clearTimeout(saveTimers[key]);
+    delete saveTimers[key];
+    try{ Promise.resolve(storageAdapter.set(key, JSON.stringify(state[key]))).catch(()=>{}); }catch(e){ /* 떠나는 중 */ }
+  });
+}
+window.addEventListener('pagehide', flushSaves);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') flushSaves(); });
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* =========================================================
+   날짜 / 초기화 계산
+========================================================= */
+function ymd(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function atReset(dateStr){ const [y,m,d] = dateStr.split('-').map(Number); return new Date(y, m-1, d, RESET_HOUR); }
+/* 게임 날짜: 05:00 전이면 전날로 본다 */
+function gameDate(now){ return new Date(now.getTime() - RESET_HOUR * 3600000); }
+function dailyStart(now){
+  const d = new Date(now); d.setHours(RESET_HOUR,0,0,0);
+  if(d > now) d.setDate(d.getDate()-1);
+  return d;
+}
+function weeklyStart(now){
+  const d = dailyStart(now);
+  while(d.getDay() !== 1) d.setDate(d.getDate()-1);
+  return d;
+}
+function resetDates(seasons){
+  const set = new Set();
+  (seasons||[]).forEach(s=>{
+    if(s.start) set.add(String(s.start).slice(0,10));
+    if(s.finish) set.add(String(s.finish).slice(0,10));
+  });
+  return [...set].filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s)).map(atReset).sort((a,b)=>a-b);
+}
+function seasonsFor(cycle){ return cycle === 'toa' ? toaSeasons : whiwaSeasons; }
+
+function periodStart(cycle, now){
+  if(cycle === 'daily') return dailyStart(now).getTime();
+  if(cycle === 'weekly') return weeklyStart(now).getTime();
+  if(cycle === 'toa' || cycle === 'whiwa'){
+    const past = resetDates(seasonsFor(cycle)).filter(d=>d <= now);
+    return past.length ? past[past.length-1].getTime() : 0;
+  }
+  return 0; // 직접: 체크를 풀기 전까지 유지
+}
+function nextResetText(cycle, now){
+  if(cycle === 'daily') return '매일 05:00 초기화';
+  if(cycle === 'weekly') return '매주 월요일 05:00 초기화';
+  if(cycle === 'toa' || cycle === 'whiwa'){
+    const next = resetDates(seasonsFor(cycle)).find(d=>d > now);
+    return next ? `${next.getMonth()+1}월 ${next.getDate()}일 05:00 초기화` : '다음 시즌 일정 없음';
+  }
+  return '직접 해제할 때까지 유지';
+}
+function isDone(item, now){ return item.doneAt != null && item.doneAt >= periodStart(item.cycle, now); }
+
+function fmtDuration(ms){
+  const totalMin = Math.max(0, Math.ceil(ms / 60000));
+  const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  return h ? `${h}시간 ${m}분` : `${m}분`;
+}
+function fmtClock(d){ return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+
+/* =========================================================
+   플레이트 추정
+========================================================= */
+function plateEstimate(now){
+  const nowMs = now instanceof Date ? now.getTime() : now;
+  const est = FwPlates.estimate(state.plates, nowMs);
+  if(est.value == null) return null;
+  return {value: est.value, fullAt: est.fullAt == null ? null : new Date(est.fullAt)};
+}
+
+/* =========================================================
+   렌더
+========================================================= */
+let weekOffset = 0;
+let settingsOpen = false;
+let plateFixOpen = false;
+
+function renderTodayLine(now){
+  const g = gameDate(now);
+  const nextDaily = new Date(dailyStart(now).getTime() + DAY_MS);
+  return `<div class="today-line">
+    <span>게임 날짜 <b>${g.getMonth()+1}월 ${g.getDate()}일 (${WEEKDAYS[g.getDay()]})</b></span>
+    <span>다음 일일 초기화까지 <b id="resetLeft">${fmtDuration(nextDaily - now)}</b></span>
+  </div>`;
+}
+
+function renderChecklist(now){
+  const items = state.checklist;
+  const doneCount = items.filter(i=>isDone(i, now)).length;
+  const rows = items.map(i=>{
+    const done = isDone(i, now);
+    return `<li class="check-item ${done?'done':''}" data-id="${i.id}">
+      <label class="main">
+        <input type="checkbox" class="ck-toggle" ${done?'checked':''}>
+        <span><span class="lbl">${escapeHtml(i.label)}</span><span class="next">${nextResetText(i.cycle, now)}</span></span>
+      </label>
+      <select class="ck-cycle" aria-label="${escapeHtml(i.label)} 초기화 주기">
+        ${CYCLES.map(c=>`<option value="${c.key}" ${i.cycle===c.key?'selected':''}>${c.label}</option>`).join('')}
+      </select>
+    </li>`;
+  }).join('');
+  return `
+    <div class="card">
+      <h2>체크리스트</h2>
+      <div class="progress-line"><span>완료</span><span><b>${doneCount}</b> / ${items.length}</span></div>
+      <div class="progress-track" style="margin:0 0 6px;" aria-hidden="true"><div class="progress-fill" style="transform:scaleX(${items.length ? doneCount/items.length : 0})"></div></div>
+      <ul class="check-list">${rows}</ul>
+      <div class="note">초기화 시각이 지나면 체크가 자동으로 풀립니다. 주기는 오른쪽에서 바꿀 수 있습니다. 탑·해역 시즌 날짜는 encore.moe API 기준입니다.</div>
+    </div>`;
+}
+
+function weekDays(now){
+  const start = weeklyStart(now);
+  start.setDate(start.getDate() + weekOffset * 7);
+  return Array.from({length:7}, (_,i)=>{ const d = new Date(start); d.setDate(d.getDate()+i); return d; });
+}
+function dayUse(date){
+  return (state.plan[date]||[]).reduce((sum,e)=> sum + e.runs * (state.costs[e.kind]||0), 0);
+}
+function renderEntry(e){
+  const cost = state.costs[e.kind] || 0;
+  return `<div class="entry ${e.done?'done':''}" data-pid="${e.id}">
+    <select class="en-kind" aria-label="소모처">${PLATE_KINDS.map(k=>`<option value="${k.key}" ${e.kind===k.key?'selected':''}>${k.label}</option>`).join('')}</select>
+    <div class="entry-row">
+      <input type="text" inputmode="numeric" class="en-runs" aria-label="횟수" placeholder="0" value="${numDisplay(e.runs)}">
+      <span class="cost">회 · ${(e.runs*cost).toLocaleString()}</span>
+    </div>
+    <div class="entry-row">
+      <label class="toggle" style="flex:1 1 auto;"><input type="checkbox" class="en-done" ${e.done?'checked':''}> 완료</label>
+      <button type="button" class="btn btn-small btn-danger en-del" aria-label="삭제">삭제</button>
+    </div>
+  </div>`;
+}
+function renderPlates(now){
+  const est = plateEstimate(now);
+  const days = weekDays(now);
+  const todayStr = ymd(gameDate(now));
+  const first = days[0], last = days[6];
+  let weekTotal = 0;
+  const cols = days.map(d=>{
+    const ds = ymd(d);
+    const use = dayUse(ds);
+    weekTotal += use;
+    const cls = ds === todayStr ? 'today' : (ds < todayStr ? 'past' : '');
+    return `<div class="day ${cls}" data-date="${ds}">
+      <div class="day-head"><span class="dw">${WEEKDAYS[d.getDay()]}${ds===todayStr?' · 오늘':''}</span><span class="dd">${d.getMonth()+1}/${d.getDate()}</span></div>
+      <div class="day-sum ${use > PLATE_MAX ? 'over' : ''}">사용 <b>${use}</b> / ${PLATE_MAX}</div>
+      <div class="day-entries">${(state.plan[ds]||[]).map(renderEntry).join('')}</div>
+      <button type="button" class="btn btn-small row-add day-add">+ 추가</button>
+    </div>`;
+  }).join('');
+
+  const s = state.costs;
+  return `
+    <div class="card">
+      <h2>결정 플레이트</h2>
+      <div class="plate-now">
+        <span class="est" id="plateEst">${plateEstText(est, now)}</span>
+      </div>
+      <div class="plate-actions">
+        <button type="button" class="btn btn-small" id="plate-use40" ${est ? '' : 'disabled'}>−40</button>
+        <button type="button" class="btn btn-small" id="plate-use60" ${est ? '' : 'disabled'}>−60</button>
+        <input type="text" inputmode="numeric" id="plate-use-amount" placeholder="직접 입력" aria-label="사용할 플레이트 개수" ${est ? '' : 'disabled'}>
+        <button type="button" class="btn" id="plate-use-btn" ${est ? '' : 'disabled'}>사용</button>
+        <button type="button" class="btn btn-small" id="plate-fix-toggle">지금 개수 고치기</button>
+      </div>
+      <div class="plate-fix ${(plateFixOpen || est == null) ? 'open' : ''}" id="plateFix">
+        <label class="toggle" style="gap:10px;">지금 보유 <input type="text" inputmode="numeric" id="plate-fix-input" placeholder="0" value="${state.plates.value == null ? '' : state.plates.value}"> / ${PLATE_MAX}</label>
+        <button type="button" class="btn btn-small" id="plate-fix-confirm">저장</button>
+      </div>
+      <div class="note" style="margin-top:0;">6분에 1개씩, 하루 ${PLATE_MAX}개 회복으로 계산합니다. 플레이트를 쓴 시각부터 다시 회복량을 더합니다.</div>
+
+      <div class="week-nav">
+        <button type="button" class="btn btn-small" id="week-prev" aria-label="이전 주">이전</button>
+        <span>${first.getMonth()+1}월 ${first.getDate()}일 ~ ${last.getMonth()+1}월 ${last.getDate()}일${weekOffset===0?'<small>이번 주</small>':''}</span>
+        <button type="button" class="btn btn-small" id="week-next" aria-label="다음 주">다음</button>
+      </div>
+      <div class="week-grid">${cols}</div>
+      <div class="week-sum">
+        <span>주간 계획 <b>${weekTotal.toLocaleString()}</b> / 회복 ${(PLATE_MAX*7).toLocaleString()}</span>
+        ${weekOffset !== 0 ? '<button type="button" class="btn btn-small" id="week-today">이번 주로</button>' : ''}
+      </div>
+
+      <div class="toolbar" style="margin:16px 0 0;justify-content:space-between;">
+        <span class="note" style="margin:0;">소모처 이름과 1회 소모량은 게임과 대조하지 않은 기본값입니다.</span>
+        <button type="button" class="btn btn-small" id="costs-toggle">${settingsOpen?'소모량 접기':'소모량 설정'}</button>
+      </div>
+      <div class="settings-body ${settingsOpen?'open':''}">
+        <table>
+          <tr><th style="text-align:left;">소모처</th><th>1회 소모량</th></tr>
+          ${PLATE_KINDS.map(k=>`<tr><td style="text-align:left;">${k.long}</td><td><input type="text" inputmode="numeric" id="cost-${k.key}" placeholder="0" value="${numDisplay(s[k.key])}"></td></tr>`).join('')}
+        </table>
+      </div>
+    </div>`;
+}
+function plateEstText(est, now){
+  if(!est) return '보유량을 입력하면 가득 차는 시각을 알려 드립니다.';
+  if(!est.fullAt) return `지금 약 <b>${est.value}</b>개 · 가득 찼습니다`;
+  const sameDay = ymd(est.fullAt) === ymd(now);
+  const when = (sameDay ? '오늘 ' : `${est.fullAt.getMonth()+1}월 ${est.fullAt.getDate()}일 `) + fmtClock(est.fullAt);
+  return `지금 약 <b>${est.value}</b>개 · 가득 참 <b>${when}</b> (${fmtDuration(est.fullAt - now)} 뒤)`;
+}
+
+function renderAll(){
+  const now = new Date();
+  const m = document.getElementById('mainArea');
+  const f = captureFocus(m);
+  m.innerHTML = `
+    ${renderTodayLine(now)}
+    ${renderChecklist(now)}
+    ${renderPlates(now)}
+  `;
+  wrapTables(m);
+  bindEvents();
+  restoreFocus(m, f);
+  lastSig = liveSignature(new Date());
+}
+
+/* =========================================================
+   이벤트
+========================================================= */
+function findEntry(date, id){ return (state.plan[date]||[]).find(e=>e.id===id); }
+
+function bindEvents(){
+  const m = document.getElementById('mainArea');
+
+  m.querySelectorAll('.check-item').forEach(li=>{
+    const item = state.checklist.find(x=>x.id===li.dataset.id);
+    if(!item) return;
+    li.querySelector('.ck-toggle').addEventListener('change', e=>{
+      item.doneAt = e.target.checked ? Date.now() : null;
+      scheduleSave('checklist'); renderAll();
+    });
+    li.querySelector('.ck-cycle').addEventListener('change', e=>{
+      item.cycle = e.target.value;
+      scheduleSave('checklist'); renderAll();
+    });
+  });
+
+  function usePlates(amount){
+    try{
+      state.plates = FwPlates.use(state.plates, amount, Date.now());
+      scheduleSave('plates');
+      renderAll();
+    }catch(err){ showToast(err.message); }
+  }
+  const use40 = m.querySelector('#plate-use40');
+  if(use40) use40.addEventListener('click', ()=> usePlates(40));
+  const use60 = m.querySelector('#plate-use60');
+  if(use60) use60.addEventListener('click', ()=> usePlates(60));
+  const useBtn = m.querySelector('#plate-use-btn');
+  if(useBtn) useBtn.addEventListener('click', ()=>{
+    const raw = m.querySelector('#plate-use-amount').value.trim();
+    if(raw === ''){ showToast('사용할 개수를 입력해 주세요.'); return; }
+    usePlates(parseNum(raw));
+  });
+
+  const fixToggle = m.querySelector('#plate-fix-toggle');
+  if(fixToggle) fixToggle.addEventListener('click', ()=>{ plateFixOpen = !plateFixOpen; renderAll(); });
+  const fixConfirm = m.querySelector('#plate-fix-confirm');
+  if(fixConfirm) fixConfirm.addEventListener('click', ()=>{
+    const raw = m.querySelector('#plate-fix-input').value.trim();
+    if(raw === ''){ showToast('지금 보유한 개수를 입력해 주세요.'); return; }
+    try{
+      state.plates = FwPlates.setCurrent(parseNum(raw), Date.now());
+      scheduleSave('plates');
+      plateFixOpen = false;
+      renderAll();
+    }catch(err){ showToast(err.message); }
+  });
+
+  m.querySelector('#week-prev').addEventListener('click', ()=>{ weekOffset--; renderAll(); });
+  m.querySelector('#week-next').addEventListener('click', ()=>{ weekOffset++; renderAll(); });
+  const wt = m.querySelector('#week-today');
+  if(wt) wt.addEventListener('click', ()=>{ weekOffset = 0; renderAll(); });
+
+  m.querySelectorAll('.day').forEach(dayEl=>{
+    const date = dayEl.dataset.date;
+    dayEl.querySelector('.day-add').addEventListener('click', ()=>{
+      (state.plan[date] = state.plan[date] || []).push({id:uid('pl'), kind:KIND_KEYS[0], runs:1, done:false});
+      scheduleSave('plan'); renderAll();
+    });
+    dayEl.querySelectorAll('.entry').forEach(en=>{
+      const entry = findEntry(date, en.dataset.pid);
+      if(!entry) return;
+      en.querySelector('.en-kind').addEventListener('change', e=>{ entry.kind = e.target.value; scheduleSave('plan'); renderAll(); });
+      en.querySelector('.en-runs').addEventListener('input', e=>{ entry.runs = Math.max(0, parseNum(e.target.value)); scheduleSave('plan'); renderAll(); });
+      en.querySelector('.en-done').addEventListener('change', e=>{ entry.done = e.target.checked; scheduleSave('plan'); renderAll(); });
+      en.querySelector('.en-del').addEventListener('click', ()=>{
+        state.plan[date] = state.plan[date].filter(x=>x.id!==entry.id);
+        if(!state.plan[date].length) delete state.plan[date];
+        scheduleSave('plan'); renderAll();
+      });
+    });
+  });
+
+  m.querySelector('#costs-toggle').addEventListener('click', ()=>{ settingsOpen = !settingsOpen; renderAll(); });
+  KIND_KEYS.forEach(k=>{
+    const el = m.querySelector('#cost-' + k);
+    if(el) el.addEventListener('input', e=>{ state.costs[k] = Math.max(0, parseNum(e.target.value)); scheduleSave('costs'); renderAll(); });
+  });
+}
+
+/* =========================================================
+   주기 갱신: 1분마다 게임 날짜·초기화 카운트다운·플레이트 추정치가
+   바뀌었는지 확인하고, 바뀐 게 있을 때만 다시 그림
+========================================================= */
+let lastSig = '';
+function liveSignature(now){
+  const est = plateEstimate(now);
+  return [ymd(gameDate(now)), state.checklist.map(i=>isDone(i, now)?1:0).join(''), est ? est.value : '', Math.ceil((dailyStart(now).getTime() + DAY_MS - now) / 60000)].join('|');
+}
+function isTyping(){
+  const a = document.activeElement;
+  return !!(a && a.matches('input[type=text],select') && document.getElementById('mainArea').contains(a));
+}
+function tick(){
+  const now = new Date();
+  const sig = liveSignature(now);
+  if(sig !== lastSig){
+    if(isTyping()){
+      const r = document.getElementById('resetLeft');
+      if(r) r.textContent = fmtDuration(dailyStart(now).getTime() + DAY_MS - now);
+    }else{
+      renderAll();
+    }
+  }
+}
+
+/* =========================================================
+   시즌 데이터 (best-effort)
+========================================================= */
+function parseSeasons(json){
+  const arr = (json && Array.isArray(json.seasons)) ? json.seasons : (Array.isArray(json) ? json : null);
+  if(!arr) return null;
+  const out = arr.filter(x=>x && x.start).map(x=>({start:x.start, finish:x.finish || null}));
+  return out.length ? out : null;
+}
+async function fetchOne(urls){
+  for(const url of urls){
+    try{
+      const res = await fetch(url);
+      if(!res.ok) continue;
+      const parsed = parseSeasons(await res.json());
+      if(parsed) return parsed;
+    }catch(e){ /* 다음 주소 */ }
+  }
+  return null;
+}
+async function fetchSeasons(){
+  const [toa, whiwa] = await Promise.all([
+    fetchOne(['https://api-v2.encore.moe/api/ko/toa','https://api.encore.moe/ko/toa']),
+    fetchOne(['https://api-v2.encore.moe/api/ko/whiwa','https://api.encore.moe/ko/whiwa']),
+  ]);
+  if(toa) toaSeasons = toa;
+  if(whiwa) whiwaSeasons = whiwa;
+  if(!isTyping()) renderAll();
+}
+
+(async function init(){
+  try{ localStorage.removeItem('wuwa_today_timer'); }catch(e){ /* 무시 */ }
+  await loadAll();
+  renderAll();
+  setInterval(tick, 60000);
+  fetchSeasons();
+})();
+</script>
+</body>
+</html>

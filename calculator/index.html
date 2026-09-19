@@ -107,24 +107,12 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="../assets/fw.js"></script>
+<script src="../assets/store.js"></script>
 <script>
 /* =========================================================
-   저장 어댑터 (window.storage 없으면 localStorage로 자동 폴백)
+   저장 어댑터: assets/store.js (localStorage 기반)
 ========================================================= */
-const hasArtifactStorage = typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function';
-const storageAdapter = hasArtifactStorage ? {
-  get: (key) => window.storage.get(key, false),
-  set: (key, value) => window.storage.set(key, value, false),
-} : {
-  get: async (key) => {
-    const v = localStorage.getItem('wuwa_calc_' + key);
-    return v == null ? null : {value: v};
-  },
-  set: async (key, value) => {
-    localStorage.setItem('wuwa_calc_' + key, value);
-    return {value};
-  },
-};
+const storageAdapter = FwStore.create('wuwa_calc_');
 
 /* =========================================================
    로스터 (58명 — element/weapon type은 공개 캐릭터 DB 기준으로 검증.
@@ -302,7 +290,9 @@ function flushSaves(){
   Object.keys(saveTimers).forEach(key=>{
     clearTimeout(saveTimers[key]);
     delete saveTimers[key];
-    try{ storageAdapter.set(key, JSON.stringify(state[key])); }catch(e){ /* 떠나는 중이라 알릴 곳이 없음 */ }
+    /* storageAdapter.set()은 실패하면 reject되는 프로미스를 돌려준다 — await 없이 호출하면
+       동기 try/catch로는 못 잡으므로 .catch()로 받아서 버린다(떠나는 중이라 알릴 곳이 없음). */
+    try{ Promise.resolve(storageAdapter.set(key, JSON.stringify(state[key]))).catch(()=>{}); }catch(e){ /* 떠나는 중 */ }
   });
 }
 window.addEventListener('pagehide', flushSaves);
